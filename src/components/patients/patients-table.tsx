@@ -1,12 +1,15 @@
 "use client";
 
 import { useState } from "react";
-import Link from "next/link";
+import { ArrowUpDown } from "lucide-react";
+import { PatientDetailDialog } from "@/components/patients/patient-detail-dialog";
 import {
   type ColumnDef,
+  type SortingState,
   flexRender,
   getCoreRowModel,
   getFilteredRowModel,
+  getSortedRowModel,
   useReactTable,
 } from "@tanstack/react-table";
 import {
@@ -18,6 +21,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
 
 export type PatientRow = {
   id: string;
@@ -27,31 +31,55 @@ export type PatientRow = {
   phone: string;
 };
 
+function sortableHeader(label: string) {
+  function SortableHeader({
+    column,
+  }: {
+    column: { toggleSorting: (desc?: boolean) => void; getIsSorted: () => false | "asc" | "desc" };
+  }) {
+    return (
+      <Button
+        variant="ghost"
+        size="sm"
+        className="-ml-2.5"
+        onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
+      >
+        {label}
+        <ArrowUpDown className="size-3.5" />
+      </Button>
+    );
+  }
+  return SortableHeader;
+}
+
 const columns: ColumnDef<PatientRow>[] = [
   {
     accessorKey: "name",
-    header: "Name",
+    header: sortableHeader("Name"),
     cell: ({ row }) => (
-      <Link href={`/dashboard/patients/${row.original.id}`} className="font-medium underline">
+      <PatientDetailDialog patientId={row.original.id} className="font-medium underline">
         {row.original.name}
-      </Link>
+      </PatientDetailDialog>
     ),
   },
-  { accessorKey: "dob", header: "Date of birth" },
+  { accessorKey: "dob", header: sortableHeader("Date of birth") },
   { accessorKey: "gender", header: "Gender" },
   { accessorKey: "phone", header: "Phone" },
 ];
 
 export function PatientsTable({ data }: { data: PatientRow[] }) {
   const [globalFilter, setGlobalFilter] = useState("");
+  const [sorting, setSorting] = useState<SortingState>([]);
 
   const table = useReactTable({
     data,
     columns,
-    state: { globalFilter },
+    state: { globalFilter, sorting },
     onGlobalFilterChange: setGlobalFilter,
+    onSortingChange: setSorting,
     getCoreRowModel: getCoreRowModel(),
     getFilteredRowModel: getFilteredRowModel(),
+    getSortedRowModel: getSortedRowModel(),
   });
 
   return (

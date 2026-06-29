@@ -1,9 +1,9 @@
 "use server";
 
-import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/prisma";
 import { appointmentSchema } from "@/lib/schemas/appointment";
+import { withRetry } from "@/lib/with-retry";
 import type { AppointmentStatus } from "@/generated/prisma/enums";
 
 export async function createAppointment(formData: FormData) {
@@ -18,18 +18,20 @@ export async function createAppointment(formData: FormData) {
     throw new Error(parsed.error.issues[0]?.message ?? "Invalid appointment data");
   }
 
-  await prisma.appointment.create({
-    data: {
-      ...parsed.data,
-      scheduledAt: new Date(parsed.data.scheduledAt),
-    },
-  });
+  const appointment = await withRetry(() =>
+    prisma.appointment.create({
+      data: {
+        ...parsed.data,
+        scheduledAt: new Date(parsed.data.scheduledAt),
+      },
+    }),
+  );
 
   revalidatePath("/dashboard/appointments");
-  redirect("/dashboard/appointments");
+  return appointment;
 }
 
 export async function updateAppointmentStatus(id: string, status: AppointmentStatus) {
-  await prisma.appointment.update({ where: { id }, data: { status } });
+  await withRetry(() => prisma.appointment.update({ where: { id }, data: { status } }));
   revalidatePath("/dashboard/appointments");
 }

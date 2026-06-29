@@ -24,6 +24,7 @@ export function AppointmentStatusSelect({
 
   return (
     <Select
+      items={{ SCHEDULED: "SCHEDULED", COMPLETED: "COMPLETED", CANCELLED: "CANCELLED" }}
       value={status}
       disabled={isPending}
       onValueChange={(value) =>

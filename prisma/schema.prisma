@@ -27,7 +27,6 @@ enum AppointmentStatus {
 enum Gender {
   MALE
   FEMALE
-  OTHER
 }
 
 model Profile {

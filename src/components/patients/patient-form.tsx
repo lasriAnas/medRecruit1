@@ -25,13 +25,16 @@ import {
 
 export function PatientForm({
   action,
+  onSuccess,
 }: {
-  action: (formData: FormData) => Promise<void>;
+  action: (formData: FormData) => Promise<unknown>;
+  onSuccess?: () => void;
 }) {
   const [isPending, startTransition] = useTransition();
 
   const form = useForm<PatientFormValues>({
     resolver: zodResolver(patientSchema),
+    mode: "onChange",
     defaultValues: { name: "", dob: "", gender: "MALE", phone: "", address: "" },
   });
 
@@ -40,7 +43,11 @@ export function PatientForm({
     Object.entries(values).forEach(([key, value]) => {
       if (value) formData.set(key, value);
     });
-    startTransition(() => action(formData));
+    startTransition(async () => {
+      await action(formData);
+      form.reset();
+      onSuccess?.();
+    });
   }
 
   return (
@@ -78,7 +85,11 @@ export function PatientForm({
           render={({ field }) => (
             <FormItem>
               <FormLabel>Gender</FormLabel>
-              <Select onValueChange={field.onChange} defaultValue={field.value}>
+              <Select
+                items={{ MALE: "Male", FEMALE: "Female" }}
+                onValueChange={field.onChange}
+                value={field.value}
+              >
                 <FormControl>
                   <SelectTrigger className="w-full">
                     <SelectValue />
@@ -87,7 +98,6 @@ export function PatientForm({
                 <SelectContent>
                   <SelectItem value="MALE">Male</SelectItem>
                   <SelectItem value="FEMALE">Female</SelectItem>
-                  <SelectItem value="OTHER">Other</SelectItem>
                 </SelectContent>
               </Select>
               <FormMessage />
@@ -101,7 +111,13 @@ export function PatientForm({
             <FormItem>
               <FormLabel>Phone</FormLabel>
               <FormControl>
-                <Input {...field} />
+                <Input
+                  inputMode="numeric"
+                  placeholder="0612345678"
+                  maxLength={10}
+                  {...field}
+                  onChange={(e) => field.onChange(e.target.value.replace(/\D/g, "").slice(0, 10))}
+                />
               </FormControl>
               <FormMessage />
             </FormItem>
@@ -120,7 +136,7 @@ export function PatientForm({
             </FormItem>
           )}
         />
-        <Button type="submit" disabled={isPending}>
+        <Button type="submit" disabled={isPending || !form.formState.isValid}>
           {isPending ? "Saving..." : "Register patient"}
         </Button>
       </form>

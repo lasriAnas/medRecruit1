@@ -1,18 +1,12 @@
 "use client";
 
-import { useTransition } from "react";
+import { useEffect, useState, useTransition } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { appointmentSchema, type AppointmentFormValues } from "@/lib/schemas/appointment";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+import { OptionCombobox } from "@/components/option-combobox";
 import {
   Form,
   FormControl,
@@ -28,15 +22,28 @@ export function AppointmentForm({
   action,
   patients,
   doctors,
+  onSuccess,
 }: {
-  action: (formData: FormData) => Promise<void>;
+  action: (formData: FormData) => Promise<unknown>;
   patients: Option[];
   doctors: Option[];
+  onSuccess?: () => void;
 }) {
   const [isPending, startTransition] = useTransition();
+  const doctorOptions = doctors.map((d) => ({ id: d.id, name: `Dr. ${d.name}` }));
+
+  // Computed after mount only — using `new Date()` during render would differ
+  // between the server-rendered HTML and the client hydration pass.
+  const [minDateTime, setMinDateTime] = useState<string | undefined>(undefined);
+  useEffect(() => {
+    const now = new Date();
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- intentional client-only value, set after mount to avoid SSR/client mismatch
+    setMinDateTime(new Date(now.getTime() - now.getTimezoneOffset() * 60000).toISOString().slice(0, 16));
+  }, []);
 
   const form = useForm<AppointmentFormValues>({
     resolver: zodResolver(appointmentSchema),
+    mode: "onChange",
     defaultValues: { patientId: "", doctorId: "", scheduledAt: "", notes: "" },
   });
 
@@ -45,7 +52,11 @@ export function AppointmentForm({
     Object.entries(values).forEach(([key, value]) => {
       if (value) formData.set(key, value);
     });
-    startTransition(() => action(formData));
+    startTransition(async () => {
+      await action(formData);
+      form.reset();
+      onSuccess?.();
+    });
   }
 
   return (
@@ -57,20 +68,14 @@ export function AppointmentForm({
           render={({ field }) => (
             <FormItem>
               <FormLabel>Patient</FormLabel>
-              <Select onValueChange={field.onChange} defaultValue={field.value}>
-                <FormControl>
-                  <SelectTrigger className="w-full">
-                    <SelectValue placeholder="Select a patient" />
-                  </SelectTrigger>
-                </FormControl>
-                <SelectContent>
-                  {patients.map((p) => (
-                    <SelectItem key={p.id} value={p.id}>
-                      {p.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <FormControl>
+                <OptionCombobox
+                  options={patients}
+                  value={field.value}
+                  onChange={field.onChange}
+                  placeholder="Search for a patient..."
+                />
+              </FormControl>
               <FormMessage />
             </FormItem>
           )}
@@ -81,20 +86,14 @@ export function AppointmentForm({
           render={({ field }) => (
             <FormItem>
               <FormLabel>Doctor</FormLabel>
-              <Select onValueChange={field.onChange} defaultValue={field.value}>
-                <FormControl>
-                  <SelectTrigger className="w-full">
-                    <SelectValue placeholder="Select a doctor" />
-                  </SelectTrigger>
-                </FormControl>
-                <SelectContent>
-                  {doctors.map((d) => (
-                    <SelectItem key={d.id} value={d.id}>
-                      Dr. {d.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <FormControl>
+                <OptionCombobox
+                  options={doctorOptions}
+                  value={field.value}
+                  onChange={field.onChange}
+                  placeholder="Search for a doctor..."
+                />
+              </FormControl>
               <FormMessage />
             </FormItem>
           )}
@@ -108,6 +107,7 @@ export function AppointmentForm({
               <FormControl>
                 <input
                   type="datetime-local"
+                  min={minDateTime}
                   className="border-input flex h-9 w-full rounded-md border bg-transparent px-3 py-1 text-sm shadow-xs outline-none"
                   {...field}
                 />
@@ -129,7 +129,7 @@ export function AppointmentForm({
             </FormItem>
           )}
         />
-        <Button type="submit" disabled={isPending}>
+        <Button type="submit" disabled={isPending || !form.formState.isValid}>
           {isPending ? "Scheduling..." : "Schedule appointment"}
         </Button>
       </form>
