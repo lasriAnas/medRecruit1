@@ -22,6 +22,7 @@ import {
 } from "@/components/ui/table";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
+import { toCsv, downloadCsv } from "@/lib/csv";
 
 export type PatientRow = {
   id: string;
@@ -82,14 +83,29 @@ export function PatientsTable({ data }: { data: PatientRow[] }) {
     getSortedRowModel: getSortedRowModel(),
   });
 
+  function handleExport() {
+    const rows = table.getRowModel().rows.map((row) => ({
+      Name: row.original.name,
+      "Date of birth": row.original.dob,
+      Gender: row.original.gender,
+      Phone: row.original.phone,
+    }));
+    downloadCsv("patients.csv", toCsv(rows, ["Name", "Date of birth", "Gender", "Phone"]));
+  }
+
   return (
     <div className="flex flex-col gap-4">
-      <Input
-        placeholder="Search patients..."
-        value={globalFilter}
-        onChange={(e) => setGlobalFilter(e.target.value)}
-        className="max-w-sm"
-      />
+      <div className="flex items-center justify-between gap-3">
+        <Input
+          placeholder="Search patients..."
+          value={globalFilter}
+          onChange={(e) => setGlobalFilter(e.target.value)}
+          className="max-w-sm"
+        />
+        <Button type="button" variant="outline" size="sm" onClick={handleExport}>
+          Export CSV
+        </Button>
+      </div>
       <div className="rounded-md border">
         <Table>
           <TableHeader>

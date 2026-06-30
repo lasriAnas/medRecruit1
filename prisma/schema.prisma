@@ -29,12 +29,20 @@ enum Gender {
   FEMALE
 }
 
+enum InvoiceStatus {
+  UNPAID
+  PAID
+  CANCELLED
+}
+
 model Profile {
-  id        String   @id @default(uuid())
-  email     String   @unique
-  name      String
-  role      Role     @default(RECEPTIONIST)
-  createdAt DateTime @default(now())
+  id                 String   @id @default(uuid())
+  email              String   @unique
+  name               String
+  role               Role     @default(RECEPTIONIST)
+  active             Boolean  @default(true)
+  mustChangePassword Boolean  @default(true)
+  createdAt          DateTime @default(now())
 
   appointments Appointment[] @relation("DoctorAppointments")
 }
@@ -61,4 +69,27 @@ model Appointment {
   status      AppointmentStatus @default(SCHEDULED)
   notes       String?
   createdAt   DateTime          @default(now())
+
+  invoice Invoice?
+}
+
+model Invoice {
+  id            String        @id @default(uuid())
+  appointmentId String        @unique
+  appointment   Appointment   @relation(fields: [appointmentId], references: [id], onDelete: Cascade)
+  amount        Int
+  status        InvoiceStatus @default(UNPAID)
+  createdAt     DateTime      @default(now())
+  paidAt        DateTime?
+}
+
+model AuditLog {
+  id         String   @id @default(uuid())
+  actorId    String
+  actorName  String
+  action     String
+  targetType String
+  targetId   String?
+  details    String?
+  createdAt  DateTime @default(now())
 }

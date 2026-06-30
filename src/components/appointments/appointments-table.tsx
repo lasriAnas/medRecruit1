@@ -11,14 +11,10 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Input } from "@/components/ui/input";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+import { Button } from "@/components/ui/button";
+import { OptionCombobox } from "@/components/option-combobox";
 import { AppointmentStatusSelect } from "@/components/appointments/appointment-status-select";
+import { toCsv, downloadCsv } from "@/lib/csv";
 import type { AppointmentStatus } from "@/generated/prisma/enums";
 
 export type AppointmentRow = {
@@ -44,6 +40,8 @@ export function AppointmentsTable({
   const [date, setDate] = useState("");
   const [sortAsc, setSortAsc] = useState(true);
 
+  const doctorOptions = [{ id: ALL_DOCTORS, name: "All doctors" }, ...doctors.map((d) => ({ id: d.id, name: `Dr. ${d.name}` }))];
+
   const filtered = useMemo(() => {
     return data
       .filter((row) => doctorId === ALL_DOCTORS || row.doctorId === doctorId)
@@ -55,31 +53,31 @@ export function AppointmentsTable({
       );
   }, [data, doctorId, date, sortAsc]);
 
+  function handleExport() {
+    const rows = filtered.map((appt) => ({
+      Patient: appt.patientName,
+      Doctor: `Dr. ${appt.doctorName}`,
+      "Scheduled at": new Date(appt.scheduledAt).toLocaleString(),
+      Status: appt.status,
+    }));
+    downloadCsv(
+      "appointments.csv",
+      toCsv(rows, ["Patient", "Doctor", "Scheduled at", "Status"]),
+    );
+  }
+
   return (
     <div className="flex flex-col gap-4">
       <div className="flex flex-wrap items-end gap-3">
         <div className="flex flex-col gap-1">
           <label className="text-sm text-muted-foreground">Doctor</label>
-          <Select
-            items={{
-              [ALL_DOCTORS]: "All doctors",
-              ...Object.fromEntries(doctors.map((d) => [d.id, `Dr. ${d.name}`])),
-            }}
+          <OptionCombobox
+            options={doctorOptions}
             value={doctorId}
-            onValueChange={(value) => setDoctorId(value ?? ALL_DOCTORS)}
-          >
-            <SelectTrigger className="w-48">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value={ALL_DOCTORS}>All doctors</SelectItem>
-              {doctors.map((d) => (
-                <SelectItem key={d.id} value={d.id}>
-                  Dr. {d.name}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+            onChange={(value) => setDoctorId(value || ALL_DOCTORS)}
+            placeholder="Search for a doctor..."
+            className="w-48"
+          />
         </div>
         <div className="flex flex-col gap-1">
           <label className="text-sm text-muted-foreground">Date</label>
@@ -102,6 +100,15 @@ export function AppointmentsTable({
             Clear filters
           </button>
         )}
+        <Button
+          type="button"
+          variant="outline"
+          size="sm"
+          className="ml-auto"
+          onClick={handleExport}
+        >
+          Export CSV
+        </Button>
       </div>
 
       <div className="rounded-md border">

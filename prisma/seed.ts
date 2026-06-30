@@ -51,8 +51,15 @@ async function upsertProfile(user: (typeof SEED_USERS)[number]) {
 
   return prisma.profile.upsert({
     where: { id: authUser.id },
-    update: { name: user.name, role: user.role },
-    create: { id: authUser.id, email: user.email, name: user.name, role: user.role },
+    update: { name: user.name, role: user.role, active: true, mustChangePassword: false },
+    create: {
+      id: authUser.id,
+      email: user.email,
+      name: user.name,
+      role: user.role,
+      active: true,
+      mustChangePassword: false,
+    },
   });
 }
 
@@ -98,6 +105,27 @@ async function main() {
         scheduledAt: new Date(Date.now() + (i - 10) * 24 * 60 * 60 * 1000),
         status: STATUSES[i % STATUSES.length],
         notes: i % 3 === 0 ? "Follow-up checkup" : undefined,
+      },
+    });
+  }
+
+  const completedAppointments = await prisma.appointment.findMany({
+    where: { status: "COMPLETED" },
+    orderBy: { scheduledAt: "asc" },
+    take: 3,
+  });
+
+  const invoiceStatuses = ["PAID", "PAID", "UNPAID"] as const;
+  for (let i = 0; i < completedAppointments.length; i++) {
+    const status = invoiceStatuses[i % invoiceStatuses.length];
+    await prisma.invoice.upsert({
+      where: { appointmentId: completedAppointments[i].id },
+      update: { status, paidAt: status === "PAID" ? new Date() : null },
+      create: {
+        appointmentId: completedAppointments[i].id,
+        amount: 200 + i * 50,
+        status,
+        paidAt: status === "PAID" ? new Date() : null,
       },
     });
   }

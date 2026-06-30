@@ -17,12 +17,14 @@ export function OptionCombobox({
   onChange,
   placeholder,
   emptyText = "No matches found.",
+  className = "w-full",
 }: {
   options: ComboboxOption[];
   value: string;
   onChange: (id: string) => void;
   placeholder: string;
   emptyText?: string;
+  className?: string;
 }) {
   const selected = options.find((o) => o.id === value) ?? null;
 
@@ -34,7 +36,7 @@ export function OptionCombobox({
       itemToStringLabel={(item: ComboboxOption) => item.name}
       isItemEqualToValue={(item: ComboboxOption, val: ComboboxOption) => item.id === val?.id}
     >
-      <ComboboxInput placeholder={placeholder} className="w-full" />
+      <ComboboxInput placeholder={placeholder} className={className} />
       <ComboboxContent>
         <ComboboxEmpty>{emptyText}</ComboboxEmpty>
         <ComboboxList>
