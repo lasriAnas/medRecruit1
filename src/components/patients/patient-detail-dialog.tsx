@@ -2,6 +2,7 @@
 
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import {
   Dialog,
   DialogContent,
@@ -13,6 +14,7 @@ import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { getPatientDetail, deletePatient } from "@/app/dashboard/patients/actions";
 import { getViewerRole } from "@/lib/auth-actions";
+import { PrescriptionCreateDialog } from "@/components/pharmacy/prescription-create-dialog";
 
 type Detail = Awaited<ReturnType<typeof getPatientDetail>>;
 
@@ -29,6 +31,7 @@ export function PatientDetailDialog({
   const [open, setOpen] = useState(false);
   const [detail, setDetail] = useState<Detail | null>(null);
   const [canDelete, setCanDelete] = useState(false);
+  const [canPrescribe, setCanPrescribe] = useState(false);
   const [confirmingDelete, setConfirmingDelete] = useState(false);
   const [isPending, startTransition] = useTransition();
 
@@ -41,6 +44,7 @@ export function PatientDetailDialog({
         const [data, role] = await Promise.all([getPatientDetail(patientId), getViewerRole()]);
         setDetail(data);
         setCanDelete(role === "ADMIN");
+        setCanPrescribe(role === "ADMIN" || role === "DOCTOR");
       });
     }
   }
@@ -110,29 +114,70 @@ export function PatientDetailDialog({
                   {detail.appointments.map((appt) => (
                     <div
                       key={appt.id}
-                      className="flex items-center justify-between border-b pb-2 last:border-none"
+                      className="flex flex-col gap-1 border-b pb-2 last:border-none"
                     >
-                      <div>
-                        <div className="font-medium">Dr. {appt.doctorName}</div>
-                        <div className="text-sm text-muted-foreground">
-                          {new Date(appt.scheduledAt).toLocaleString()}
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <div className="font-medium">Dr. {appt.doctorName}</div>
+                          <div className="text-sm text-muted-foreground">
+                            {new Date(appt.scheduledAt).toLocaleString()}
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-1.5">
+                          {appt.invoiceStatus && (
+                            <Badge variant={appt.invoiceStatus === "UNPAID" ? "destructive" : "secondary"}>
+                              {appt.invoiceStatus === "UNPAID"
+                                ? `UNPAID · ${appt.invoiceAmount} MAD`
+                                : appt.invoiceStatus}
+                            </Badge>
+                          )}
+                          <Badge variant="secondary">{appt.status}</Badge>
+                          {canPrescribe && appt.status === "COMPLETED" && (
+                            <PrescriptionCreateDialog
+                              appointmentId={appt.id}
+                              existingCount={appt.prescriptionItems.length}
+                              onSuccess={() =>
+                                startTransition(async () => {
+                                  const data = await getPatientDetail(patientId);
+                                  setDetail(data);
+                                })
+                              }
+                            />
+                          )}
                         </div>
                       </div>
-                      <div className="flex items-center gap-1.5">
-                        {appt.invoiceStatus && (
-                          <Badge variant={appt.invoiceStatus === "UNPAID" ? "destructive" : "secondary"}>
-                            {appt.invoiceStatus === "UNPAID"
-                              ? `UNPAID · ${appt.invoiceAmount} MAD`
-                              : appt.invoiceStatus}
-                          </Badge>
-                        )}
-                        <Badge variant="secondary">{appt.status}</Badge>
-                      </div>
+                      {appt.prescriptionItems.length > 0 && (
+                        <div className="flex flex-col gap-1 pl-1 pt-0.5">
+                          {appt.prescriptionItems.map((item, i) => (
+                            <div key={item.id} className="flex items-start gap-2 rounded-sm bg-muted/50 px-2 py-1">
+                              <span className="text-xs text-muted-foreground mt-0.5 shrink-0">{i + 1}.</span>
+                              <div className="flex flex-col gap-0.5 flex-1">
+                                <span className="text-xs font-medium">{item.medicationName}</span>
+                                <span className="text-xs text-muted-foreground">
+                                  {item.dosage} · {item.duration}
+                                </span>
+                                {item.notes && (
+                                  <span className="text-xs text-muted-foreground italic">{item.notes}</span>
+                                )}
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      )}
                     </div>
                   ))}
                 </div>
               )}
             </div>
+
+            <Separator />
+            <Link
+              href={`/dashboard/patients/${patientId}`}
+              className="text-sm text-muted-foreground hover:text-foreground underline"
+              onClick={() => setOpen(false)}
+            >
+              View full profile →
+            </Link>
 
             {canDelete && (
               <>

@@ -23,6 +23,7 @@ export type UserRow = {
   active: boolean;
   mustChangePassword: boolean;
   createdAt: string;
+  isOwner: boolean;
 };
 
 function DeactivateButton({ id, active }: { id: string; active: boolean }) {
@@ -57,6 +58,7 @@ export function UsersTable({ data, currentUserId }: { data: UserRow[]; currentUs
         <TableBody>
           {data.map((user) => {
             const isSelf = user.id === currentUserId;
+            const locked = user.isOwner;
             return (
               <TableRow key={user.id}>
                 <TableCell>
@@ -65,9 +67,10 @@ export function UsersTable({ data, currentUserId }: { data: UserRow[]; currentUs
                 </TableCell>
                 <TableCell>{user.email}</TableCell>
                 <TableCell>
-                  <RoleSelect profileId={user.id} role={user.role} disabled={isSelf} />
+                  <RoleSelect profileId={user.id} role={user.role} disabled={isSelf || locked} />
                 </TableCell>
                 <TableCell className="flex flex-wrap gap-1">
+                  {locked && <Badge variant="secondary">Owner</Badge>}
                   <Badge variant={user.active ? "secondary" : "destructive"}>
                     {user.active ? "Active" : "Deactivated"}
                   </Badge>
@@ -76,7 +79,7 @@ export function UsersTable({ data, currentUserId }: { data: UserRow[]; currentUs
                   )}
                 </TableCell>
                 <TableCell className="text-right">
-                  {!isSelf && <DeactivateButton id={user.id} active={user.active} />}
+                  {!isSelf && !locked && <DeactivateButton id={user.id} active={user.active} />}
                 </TableCell>
               </TableRow>
             );

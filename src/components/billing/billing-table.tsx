@@ -1,8 +1,8 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import Link from "next/link";
 import { PatientDetailDialog } from "@/components/patients/patient-detail-dialog";
+import { ReceiptDialog } from "@/components/billing/receipt-dialog";
 import { Button } from "@/components/ui/button";
 import {
   Table,
@@ -29,26 +29,35 @@ export type InvoiceRow = {
   patientName: string;
   doctorName: string;
   scheduledAt: string;
+  paidAt: string | null;
   amount: number;
   status: InvoiceStatus;
   createdAt: string;
+  appointmentCompleted: boolean;
 };
 
-const ALL_STATUSES = "ALL";
+const ALL = "ALL";
 
 export function BillingTable({ data }: { data: InvoiceRow[] }) {
-  const [status, setStatus] = useState(ALL_STATUSES);
+  const [status, setStatus] = useState(ALL);
+  const [doctor, setDoctor] = useState(ALL);
   const [sortAsc, setSortAsc] = useState(false);
+
+  const doctorNames = useMemo(
+    () => Array.from(new Set(data.map((r) => r.doctorName))).sort(),
+    [data],
+  );
 
   const filtered = useMemo(() => {
     return data
-      .filter((row) => status === ALL_STATUSES || row.status === status)
+      .filter((row) => status === ALL || row.status === status)
+      .filter((row) => doctor === ALL || row.doctorName === doctor)
       .sort((a, b) =>
         sortAsc
           ? a.createdAt.localeCompare(b.createdAt)
           : b.createdAt.localeCompare(a.createdAt),
       );
-  }, [data, status, sortAsc]);
+  }, [data, status, doctor, sortAsc]);
 
   function handleExport() {
     const rows = filtered.map((invoice) => ({
@@ -78,26 +87,44 @@ export function BillingTable({ data }: { data: InvoiceRow[] }) {
         <div className="flex flex-col gap-1">
           <label className="text-sm text-muted-foreground">Status</label>
           <Select
-            items={{ [ALL_STATUSES]: "All statuses", UNPAID: "UNPAID", PAID: "PAID", CANCELLED: "CANCELLED" }}
+            items={{ [ALL]: "All statuses", UNPAID: "UNPAID", PAID: "PAID", CANCELLED: "CANCELLED" }}
             value={status}
-            onValueChange={(value) => setStatus(value ?? ALL_STATUSES)}
+            onValueChange={(value) => setStatus(value ?? ALL)}
           >
             <SelectTrigger className="w-44">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value={ALL_STATUSES}>All statuses</SelectItem>
+              <SelectItem value={ALL}>All statuses</SelectItem>
               <SelectItem value="UNPAID">UNPAID</SelectItem>
               <SelectItem value="PAID">PAID</SelectItem>
               <SelectItem value="CANCELLED">CANCELLED</SelectItem>
             </SelectContent>
           </Select>
         </div>
-        {status !== ALL_STATUSES && (
+        <div className="flex flex-col gap-1">
+          <label className="text-sm text-muted-foreground">Doctor</label>
+          <Select
+            items={{ [ALL]: "All doctors", ...Object.fromEntries(doctorNames.map((n) => [n, `Dr. ${n}`])) }}
+            value={doctor}
+            onValueChange={(value) => setDoctor(value ?? ALL)}
+          >
+            <SelectTrigger className="w-48">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value={ALL}>All doctors</SelectItem>
+              {doctorNames.map((n) => (
+                <SelectItem key={n} value={n}>Dr. {n}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+        {(status !== ALL || doctor !== ALL) && (
           <button
             type="button"
-            className="text-sm text-muted-foreground underline"
-            onClick={() => setStatus(ALL_STATUSES)}
+            className="text-sm text-muted-foreground underline self-end mb-0.5"
+            onClick={() => { setStatus(ALL); setDoctor(ALL); }}
           >
             Clear filters
           </button>
@@ -154,23 +181,24 @@ export function BillingTable({ data }: { data: InvoiceRow[] }) {
                   <TableCell>{invoice.amount}</TableCell>
                   <TableCell>{new Date(invoice.createdAt).toLocaleString()}</TableCell>
                   <TableCell>
-                    <InvoiceStatusSelect invoiceId={invoice.id} status={invoice.status} />
+                    <InvoiceStatusSelect
+                      invoiceId={invoice.id}
+                      status={invoice.status}
+                      appointmentCompleted={invoice.appointmentCompleted}
+                    />
                   </TableCell>
                   <TableCell className="text-right">
                     {invoice.status === "PAID" && (
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        nativeButton={false}
-                        render={
-                          <Link
-                            href={`/dashboard/billing/${invoice.id}/receipt`}
-                            target="_blank"
-                          />
-                        }
-                      >
-                        View
-                      </Button>
+                      <ReceiptDialog
+                        receipt={{
+                          id: invoice.id,
+                          patientName: invoice.patientName,
+                          doctorName: invoice.doctorName,
+                          scheduledAt: invoice.scheduledAt,
+                          paidAt: invoice.paidAt,
+                          amount: invoice.amount,
+                        }}
+                      />
                     )}
                   </TableCell>
                 </TableRow>

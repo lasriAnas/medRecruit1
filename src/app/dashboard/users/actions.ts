@@ -55,12 +55,24 @@ export async function createUserAccount(formData: FormData) {
   }
 }
 
+const OWNER_EMAIL = process.env.SUPER_ADMIN_EMAIL;
+
+function isOwner(email: string) {
+  return OWNER_EMAIL ? email === OWNER_EMAIL : false;
+}
+
 export async function updateUserRole(profileId: string, role: Role) {
   const actor = await requireRole(["ADMIN"]);
 
   if (actor.id === profileId) {
     throw new Error("You can't change your own role.");
   }
+
+  const existing = await withRetry(() =>
+    prisma.profile.findUnique({ where: { id: profileId }, select: { email: true } }),
+  );
+  if (!existing) throw new Error("User not found");
+  if (isOwner(existing.email)) throw new Error("The owner account's role cannot be changed.");
 
   const target = await withRetry(() =>
     prisma.profile.update({ where: { id: profileId }, data: { role } }),
@@ -81,6 +93,12 @@ export async function setUserActive(profileId: string, active: boolean) {
   if (actor.id === profileId) {
     throw new Error("You can't deactivate your own account.");
   }
+
+  const existing = await withRetry(() =>
+    prisma.profile.findUnique({ where: { id: profileId }, select: { email: true } }),
+  );
+  if (!existing) throw new Error("User not found");
+  if (isOwner(existing.email)) throw new Error("The owner account cannot be deactivated.");
 
   const target = await withRetry(() =>
     prisma.profile.update({ where: { id: profileId }, data: { active } }),

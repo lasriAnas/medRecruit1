@@ -36,6 +36,19 @@ export async function createInvoice(formData: FormData) {
 export async function updateInvoiceStatus(id: string, status: InvoiceStatus) {
   const actor = await requireRole(["ADMIN", "RECEPTIONIST"]);
 
+  if (status === "PAID") {
+    const invoice = await withRetry(() =>
+      prisma.invoice.findUnique({
+        where: { id },
+        include: { appointment: { select: { status: true } } },
+      }),
+    );
+    if (!invoice) throw new Error("Invoice not found");
+    if (invoice.appointment.status !== "COMPLETED") {
+      throw new Error("Cannot mark as paid until the appointment is completed.");
+    }
+  }
+
   await withRetry(() =>
     prisma.invoice.update({
       where: { id },

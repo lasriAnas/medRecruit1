@@ -42,7 +42,11 @@ export async function getPatientDetail(id: string) {
       include: {
         appointments: {
           orderBy: { scheduledAt: "desc" },
-          include: { doctor: true, invoice: true },
+          include: {
+            doctor: true,
+            invoice: true,
+            prescription: { include: { items: { orderBy: { createdAt: "asc" } } } },
+          },
         },
       },
     }),
@@ -73,6 +77,14 @@ export async function getPatientDetail(id: string) {
       status: appt.status,
       invoiceStatus: appt.invoice?.status ?? null,
       invoiceAmount: appt.invoice?.amount ?? null,
+      prescriptionId: appt.prescription?.id ?? null,
+      prescriptionItems: (appt.prescription?.items ?? []).map((item) => ({
+        id: item.id,
+        medicationName: item.medicationName,
+        dosage: item.dosage,
+        duration: item.duration,
+        notes: item.notes,
+      })),
     })),
   };
 }

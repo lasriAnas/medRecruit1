@@ -31,6 +31,8 @@ export default async function ReportsPage() {
   const tomorrowStart = new Date(todayStart.getTime() + 24 * 60 * 60 * 1000);
   const weekStart = startOfWeek(now);
 
+  const next24h = new Date(now.getTime() + 24 * 60 * 60 * 1000);
+
   const [
     appointmentsToday,
     appointmentsThisWeek,
@@ -38,6 +40,8 @@ export default async function ReportsPage() {
     doctorWorkload,
     totalPatients,
     newPatientsThisWeek,
+    upcomingAppointments,
+    unpaidInvoiceCount,
   ] = await withRetry(() =>
     Promise.all([
       prisma.appointment.groupBy({
@@ -61,8 +65,17 @@ export default async function ReportsPage() {
       }),
       prisma.patient.count(),
       prisma.patient.count({ where: { createdAt: { gte: weekStart } } }),
+      prisma.appointment.findMany({
+        where: { scheduledAt: { gte: now, lt: next24h }, status: "SCHEDULED" },
+        orderBy: { scheduledAt: "asc" },
+        include: { patient: true, doctor: true },
+      }),
+      prisma.invoice.count({ where: { status: "UNPAID" } }),
     ]),
   );
+
+  const allMedications = await withRetry(() => prisma.medication.findMany());
+  const lowStockMedications = allMedications.filter((m) => m.stock <= m.reorderThreshold);
 
   const doctorIds = doctorWorkload.map((d) => d.doctorId);
   const doctors = await withRetry(() =>
@@ -110,6 +123,59 @@ export default async function ReportsPage() {
         <h1 className="text-2xl font-semibold">Reports</h1>
         <ExportReportButton data={exportData} />
       </div>
+
+      {(upcomingAppointments.length > 0 || unpaidInvoiceCount > 0 || lowStockMedications.length > 0) && (
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          {upcomingAppointments.length > 0 && (
+            <div className="rounded-lg border border-amber-300 bg-amber-50 p-4 flex flex-col gap-3">
+              <div className="flex items-center gap-2">
+                <span className="font-semibold text-amber-800">
+                  {upcomingAppointments.length} appointment{upcomingAppointments.length !== 1 ? "s" : ""} in the next 24h
+                </span>
+              </div>
+              <ul className="flex flex-col gap-1">
+                {upcomingAppointments.map((appt) => (
+                  <li key={appt.id} className="text-sm text-amber-900 flex items-center gap-2">
+                    <span className="font-medium">{appt.patient.name}</span>
+                    <span className="text-amber-600">·</span>
+                    <span>Dr. {appt.doctor.name}</span>
+                    <span className="text-amber-600">·</span>
+                    <span>{appt.scheduledAt.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}</span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
+
+          {unpaidInvoiceCount > 0 && (
+            <div className="rounded-lg border border-red-300 bg-red-50 p-4 flex flex-col gap-1">
+              <span className="font-semibold text-red-800">
+                {unpaidInvoiceCount} unpaid invoice{unpaidInvoiceCount !== 1 ? "s" : ""}
+              </span>
+              <span className="text-sm text-red-700">
+                {revenueOutstanding.toLocaleString()} MAD outstanding — go to Billing to follow up.
+              </span>
+            </div>
+          )}
+
+          {lowStockMedications.length > 0 && (
+            <div className="rounded-lg border border-orange-300 bg-orange-50 p-4 flex flex-col gap-3">
+              <span className="font-semibold text-orange-800">
+                {lowStockMedications.length} medication{lowStockMedications.length !== 1 ? "s" : ""} low on stock
+              </span>
+              <ul className="flex flex-col gap-1">
+                {lowStockMedications.map((med) => (
+                  <li key={med.id} className="text-sm text-orange-900 flex items-center gap-2">
+                    <span className="font-medium">{med.name}</span>
+                    <span className="text-orange-600">·</span>
+                    <span>{med.stock} {med.unit}s remaining (threshold: {med.reorderThreshold})</span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
+        </div>
+      )}
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <Card>

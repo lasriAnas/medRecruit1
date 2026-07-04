@@ -16,9 +16,11 @@ const STATUSES: InvoiceStatus[] = ["UNPAID", "PAID", "CANCELLED"];
 export function InvoiceStatusSelect({
   invoiceId,
   status,
+  appointmentCompleted,
 }: {
   invoiceId: string;
   status: InvoiceStatus;
+  appointmentCompleted: boolean;
 }) {
   const [isPending, startTransition] = useTransition();
 
@@ -36,7 +38,7 @@ export function InvoiceStatusSelect({
       </SelectTrigger>
       <SelectContent>
         {STATUSES.map((s) => (
-          <SelectItem key={s} value={s}>
+          <SelectItem key={s} value={s} disabled={s === "PAID" && !appointmentCompleted}>
             {s}
           </SelectItem>
         ))}

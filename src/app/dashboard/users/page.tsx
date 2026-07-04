@@ -15,6 +15,8 @@ export default async function UsersPage() {
     prisma.profile.findMany({ orderBy: { createdAt: "asc" } }),
   );
 
+  const ownerEmail = process.env.SUPER_ADMIN_EMAIL;
+
   const rows: UserRow[] = users.map((user) => ({
     id: user.id,
     name: user.name,
@@ -23,6 +25,7 @@ export default async function UsersPage() {
     active: user.active,
     mustChangePassword: user.mustChangePassword,
     createdAt: user.createdAt.toISOString(),
+    isOwner: ownerEmail ? user.email === ownerEmail : false,
   }));
 
   return (

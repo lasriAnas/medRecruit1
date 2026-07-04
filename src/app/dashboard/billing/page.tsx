@@ -31,9 +31,11 @@ export default async function BillingPage() {
     patientName: invoice.appointment.patient.name,
     doctorName: invoice.appointment.doctor.name,
     scheduledAt: invoice.appointment.scheduledAt.toISOString(),
+    paidAt: invoice.paidAt ? invoice.paidAt.toISOString() : null,
     amount: invoice.amount,
     status: invoice.status,
     createdAt: invoice.createdAt.toISOString(),
+    appointmentCompleted: invoice.appointment.status === "COMPLETED",
   }));
 
   const appointmentOptions = uninvoicedAppointments.map((appt) => ({

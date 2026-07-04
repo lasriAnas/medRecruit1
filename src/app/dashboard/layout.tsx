@@ -1,8 +1,8 @@
-import Link from "next/link";
 import { redirect } from "next/navigation";
 import { getCurrentProfile } from "@/lib/auth";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { DashboardNav } from "@/components/dashboard-nav";
 import { signOut } from "./actions";
 import type { Role } from "@/generated/prisma/enums";
 
@@ -11,6 +11,7 @@ const NAV_ITEMS: { href: string; label: string; roles: Role[] }[] = [
   { href: "/dashboard/patients", label: "Patients", roles: ["ADMIN", "DOCTOR", "RECEPTIONIST"] },
   { href: "/dashboard/appointments", label: "Appointments", roles: ["ADMIN", "DOCTOR", "RECEPTIONIST"] },
   { href: "/dashboard/billing", label: "Billing", roles: ["ADMIN", "RECEPTIONIST"] },
+  { href: "/dashboard/pharmacy", label: "Pharmacy", roles: ["ADMIN", "DOCTOR", "RECEPTIONIST"] },
   { href: "/dashboard/users", label: "Users", roles: ["ADMIN"] },
   { href: "/dashboard/audit-log", label: "Audit log", roles: ["ADMIN"] },
 ];
@@ -36,17 +37,7 @@ export default async function DashboardLayout({
     <div className="flex min-h-screen">
       <aside className="w-56 border-r bg-muted/30 p-4 flex flex-col gap-4 print:hidden">
         <div className="text-lg font-semibold px-2">medRecrut</div>
-        <nav className="flex flex-col gap-1">
-          {visibleNavItems.map((item) => (
-            <Link
-              key={item.href}
-              href={item.href}
-              className="rounded-md px-2 py-2 text-sm hover:bg-muted"
-            >
-              {item.label}
-            </Link>
-          ))}
-        </nav>
+        <DashboardNav items={visibleNavItems} />
       </aside>
       <div className="flex-1 flex flex-col">
         <header className="flex items-center justify-between border-b px-6 py-3 print:hidden">

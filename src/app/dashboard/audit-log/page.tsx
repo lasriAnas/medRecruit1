@@ -2,6 +2,7 @@ import { redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { withRetry } from "@/lib/with-retry";
 import { getCurrentProfile } from "@/lib/auth";
+import { AuditLogFilters } from "@/components/audit-log/audit-log-filters";
 import {
   Table,
   TableBody,
@@ -11,6 +12,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
+import type { Prisma } from "@/generated/prisma/client";
 
 const ACTION_LABELS: Record<string, string> = {
   ACCOUNT_CREATED: "Account created",
@@ -21,19 +23,35 @@ const ACTION_LABELS: Record<string, string> = {
   INVOICE_STATUS_CHANGED: "Invoice status changed",
 };
 
-export default async function AuditLogPage() {
+export default async function AuditLogPage({
+  searchParams,
+}: {
+  searchParams: Promise<Record<string, string>>;
+}) {
   const profile = await getCurrentProfile();
   if (profile?.role !== "ADMIN") {
     redirect("/dashboard/patients");
   }
 
+  const { action, actor } = await searchParams;
+
+  const where: Prisma.AuditLogWhereInput = {};
+  if (action) where.action = action;
+  if (actor) where.actorName = { contains: actor, mode: "insensitive" };
+
   const logs = await withRetry(() =>
-    prisma.auditLog.findMany({ orderBy: { createdAt: "desc" }, take: 200 }),
+    prisma.auditLog.findMany({
+      where,
+      orderBy: { createdAt: "desc" },
+      take: 200,
+    }),
   );
 
   return (
     <div className="flex flex-col gap-6">
       <h1 className="text-2xl font-semibold">Audit log</h1>
+
+      <AuditLogFilters />
 
       <div className="rounded-md border">
         <Table>
@@ -50,7 +68,7 @@ export default async function AuditLogPage() {
             {logs.length === 0 ? (
               <TableRow>
                 <TableCell colSpan={5} className="text-center text-muted-foreground">
-                  No audit events yet.
+                  No audit events found.
                 </TableCell>
               </TableRow>
             ) : (
