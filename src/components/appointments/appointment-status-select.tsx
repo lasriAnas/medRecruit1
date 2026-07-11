@@ -8,6 +8,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { toast } from "sonner";
 import { updateAppointmentStatus } from "@/app/dashboard/appointments/actions";
 import type { AppointmentStatus } from "@/generated/prisma/enums";
 
@@ -28,7 +29,15 @@ export function AppointmentStatusSelect({
       value={status}
       disabled={isPending}
       onValueChange={(value) =>
-        startTransition(() => updateAppointmentStatus(appointmentId, value as AppointmentStatus))
+        startTransition(async () => {
+          if (!value) return;
+          try {
+            await updateAppointmentStatus(appointmentId, value as AppointmentStatus);
+            toast.success(`Appointment marked as ${value.toLowerCase()}`);
+          } catch (err) {
+            toast.error(err instanceof Error ? err.message : "Failed to update status");
+          }
+        })
       }
     >
       <SelectTrigger className="w-36">

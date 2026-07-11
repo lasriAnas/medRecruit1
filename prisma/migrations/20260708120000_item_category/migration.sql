@@ -1,0 +1,2 @@
+CREATE TYPE "ItemCategory" AS ENUM ('MEDICATION', 'SUPPLY');
+ALTER TABLE "Medication" ADD COLUMN "category" "ItemCategory" NOT NULL DEFAULT 'MEDICATION';

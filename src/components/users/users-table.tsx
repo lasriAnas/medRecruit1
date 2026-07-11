@@ -9,6 +9,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { RoleSelect } from "@/components/users/role-select";
@@ -35,7 +36,12 @@ function DeactivateButton({ id, active }: { id: string; active: boolean }) {
       variant={active ? "destructive" : "outline"}
       size="sm"
       disabled={isPending}
-      onClick={() => startTransition(() => setUserActive(id, !active))}
+      onClick={() =>
+        startTransition(async () => {
+          await setUserActive(id, !active);
+          toast.success(active ? "Account deactivated" : "Account reactivated");
+        })
+      }
     >
       {isPending ? "..." : active ? "Deactivate" : "Reactivate"}
     </Button>

@@ -23,15 +23,15 @@ import {
   FormLabel,
   FormMessage,
 } from "@/components/ui/form";
-import { restockMedication } from "@/app/dashboard/pharmacy/actions";
+import { useStock } from "@/app/dashboard/pharmacy/actions";
 
 const schema = z.object({
   quantity: z.string().regex(/^[1-9]\d*$/, "Quantity must be at least 1"),
 });
 
-type Medication = { id: string; name: string; unit: string };
+type Item = { id: string; name: string; unit: string; stock: number };
 
-export function RestockDialog({ medication }: { medication: Medication }) {
+export function UseStockDialog({ item }: { item: Item }) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
   const [isPending, startTransition] = useTransition();
@@ -44,24 +44,29 @@ export function RestockDialog({ medication }: { medication: Medication }) {
 
   function onSubmit(values: { quantity: string }) {
     const formData = new FormData();
-    formData.set("medicationId", medication.id);
+    formData.set("medicationId", item.id);
     formData.set("quantity", values.quantity);
     startTransition(async () => {
-      await restockMedication(formData);
-      toast.success(`Restocked ${medication.name}`);
-      form.reset();
-      setOpen(false);
-      router.refresh();
+      try {
+        await useStock(formData);
+        toast.success(`Used ${values.quantity} ${item.unit}(s) of ${item.name}`);
+        form.reset();
+        setOpen(false);
+        router.refresh();
+      } catch (err) {
+        toast.error(err instanceof Error ? err.message : "Failed to record usage");
+      }
     });
   }
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger render={<Button variant="outline" size="sm">Restock</Button>} />
+      <DialogTrigger render={<Button variant="outline" size="sm">Use</Button>} />
       <DialogContent className="sm:max-w-xs">
         <DialogHeader>
-          <DialogTitle>Restock {medication.name}</DialogTitle>
+          <DialogTitle>Record usage — {item.name}</DialogTitle>
         </DialogHeader>
+        <p className="text-sm text-muted-foreground">{item.stock} {item.unit}(s) currently in stock.</p>
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="flex flex-col gap-4">
             <FormField
@@ -69,16 +74,16 @@ export function RestockDialog({ medication }: { medication: Medication }) {
               name="quantity"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Quantity ({medication.unit}s to add)</FormLabel>
+                  <FormLabel>Quantity used ({item.unit}s)</FormLabel>
                   <FormControl>
-                    <Input type="number" min={1} {...field} />
+                    <Input type="number" min={1} max={item.stock} {...field} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
               )}
             />
             <Button type="submit" disabled={isPending || !form.formState.isValid}>
-              {isPending ? "Restocking..." : "Add stock"}
+              {isPending ? "Recording..." : "Record usage"}
             </Button>
           </form>
         </Form>

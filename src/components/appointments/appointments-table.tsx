@@ -28,6 +28,7 @@ export type AppointmentRow = {
 };
 
 const ALL_DOCTORS = "ALL";
+const PAGE_SIZE = 20;
 
 export function AppointmentsTable({
   data,
@@ -39,6 +40,7 @@ export function AppointmentsTable({
   const [doctorId, setDoctorId] = useState(ALL_DOCTORS);
   const [date, setDate] = useState("");
   const [sortAsc, setSortAsc] = useState(true);
+  const [page, setPage] = useState(0);
 
   const doctorOptions = [{ id: ALL_DOCTORS, name: "All doctors" }, ...doctors.map((d) => ({ id: d.id, name: `Dr. ${d.name}` }))];
 
@@ -52,6 +54,11 @@ export function AppointmentsTable({
           : b.scheduledAt.localeCompare(a.scheduledAt),
       );
   }, [data, doctorId, date, sortAsc]);
+
+  const pageCount = Math.ceil(filtered.length / PAGE_SIZE);
+  const paginated = filtered.slice(page * PAGE_SIZE, (page + 1) * PAGE_SIZE);
+
+  function resetPage() { setPage(0); }
 
   function handleExport() {
     const rows = filtered.map((appt) => ({
@@ -74,7 +81,7 @@ export function AppointmentsTable({
           <OptionCombobox
             options={doctorOptions}
             value={doctorId}
-            onChange={(value) => setDoctorId(value || ALL_DOCTORS)}
+            onChange={(value) => { setDoctorId(value || ALL_DOCTORS); resetPage(); }}
             placeholder="Search for a doctor..."
             className="w-48"
           />
@@ -84,7 +91,7 @@ export function AppointmentsTable({
           <Input
             type="date"
             value={date}
-            onChange={(e) => setDate(e.target.value)}
+            onChange={(e) => { setDate(e.target.value); resetPage(); }}
             className="w-44"
           />
         </div>
@@ -137,7 +144,7 @@ export function AppointmentsTable({
                 </TableCell>
               </TableRow>
             ) : (
-              filtered.map((appt) => (
+              paginated.map((appt) => (
                 <TableRow key={appt.id}>
                   <TableCell>
                     <PatientDetailDialog patientId={appt.patientId} className="underline">
@@ -155,6 +162,19 @@ export function AppointmentsTable({
           </TableBody>
         </Table>
       </div>
+      {pageCount > 1 && (
+        <div className="flex items-center justify-between text-sm text-muted-foreground">
+          <span>Page {page + 1} of {pageCount}</span>
+          <div className="flex gap-2">
+            <Button variant="outline" size="sm" onClick={() => setPage((p) => p - 1)} disabled={page === 0}>
+              Previous
+            </Button>
+            <Button variant="outline" size="sm" onClick={() => setPage((p) => p + 1)} disabled={page >= pageCount - 1}>
+              Next
+            </Button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

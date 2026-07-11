@@ -5,6 +5,7 @@ export const medicationSchema = z.object({
   unit: z.string().min(1, "Unit is required"),
   stock: z.string().regex(/^\d+$/, "Stock must be a whole number"),
   reorderThreshold: z.string().regex(/^[1-9]\d*$/, "Reorder threshold must be at least 1"),
+  category: z.enum(["MEDICATION", "SUPPLY"]),
 });
 
 export type MedicationFormValues = z.infer<typeof medicationSchema>;

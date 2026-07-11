@@ -15,32 +15,45 @@ import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { deleteMedication } from "@/app/dashboard/pharmacy/actions";
 import { RestockDialog } from "@/components/pharmacy/restock-dialog";
+import { UseStockDialog } from "@/components/pharmacy/use-stock-dialog";
 
-type Medication = {
+type Item = {
   id: string;
   name: string;
   unit: string;
   stock: number;
   reorderThreshold: number;
+  category: "MEDICATION" | "SUPPLY";
 };
+
+type Filter = "ALL" | "MEDICATION" | "SUPPLY";
 
 export function PharmacyTable({
   data,
   canRestock,
   canDelete,
 }: {
-  data: Medication[];
+  data: Item[];
   canRestock: boolean;
   canDelete: boolean;
 }) {
   const router = useRouter();
   const [search, setSearch] = useState("");
+  const [filter, setFilter] = useState<Filter>("ALL");
   const [confirmingDelete, setConfirmingDelete] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
 
-  const filtered = data.filter((m) =>
-    m.name.toLowerCase().includes(search.toLowerCase()),
-  );
+  const filtered = data.filter((m) => {
+    const matchesSearch = m.name.toLowerCase().includes(search.toLowerCase());
+    const matchesFilter = filter === "ALL" || m.category === filter;
+    return matchesSearch && matchesFilter;
+  });
+
+  const counts = {
+    ALL: data.length,
+    MEDICATION: data.filter((m) => m.category === "MEDICATION").length,
+    SUPPLY: data.filter((m) => m.category === "SUPPLY").length,
+  };
 
   function handleDelete(id: string) {
     startTransition(async () => {
@@ -50,52 +63,84 @@ export function PharmacyTable({
     });
   }
 
+  const TABS: { key: Filter; label: string }[] = [
+    { key: "ALL",        label: `All (${counts.ALL})`               },
+    { key: "MEDICATION", label: `Medications (${counts.MEDICATION})` },
+    { key: "SUPPLY",     label: `Supplies (${counts.SUPPLY})`        },
+  ];
+
   return (
     <div className="flex flex-col gap-4">
-      <Input
-        placeholder="Search medications..."
-        value={search}
-        onChange={(e) => setSearch(e.target.value)}
-        className="max-w-xs"
-      />
+      <div className="flex flex-wrap items-center gap-3">
+        <Input
+          placeholder="Search..."
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          className="max-w-xs"
+        />
+        <div className="flex gap-1 ml-auto">
+          {TABS.map((tab) => (
+            <Button
+              key={tab.key}
+              type="button"
+              variant={filter === tab.key ? "default" : "outline"}
+              size="sm"
+              onClick={() => setFilter(tab.key)}
+            >
+              {tab.label}
+            </Button>
+          ))}
+        </div>
+      </div>
 
       <div className="rounded-md border">
         <Table>
           <TableHeader>
             <TableRow>
               <TableHead>Name</TableHead>
+              <TableHead>Type</TableHead>
               <TableHead>Unit</TableHead>
               <TableHead>Stock</TableHead>
-              <TableHead>Reorder threshold</TableHead>
+              <TableHead>Reorder at</TableHead>
               <TableHead />
             </TableRow>
           </TableHeader>
           <TableBody>
             {filtered.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={5} className="text-center text-muted-foreground">
-                  {data.length === 0 ? "No medications added yet." : "No medications match your search."}
+                <TableCell colSpan={6} className="text-center text-muted-foreground">
+                  {data.length === 0 ? "No items added yet." : "No items match your search."}
                 </TableCell>
               </TableRow>
             ) : (
-              filtered.map((med) => (
-                <TableRow key={med.id}>
-                  <TableCell className="font-medium">{med.name}</TableCell>
-                  <TableCell>{med.unit}</TableCell>
+              filtered.map((item) => (
+                <TableRow key={item.id}>
+                  <TableCell className="font-medium">{item.name}</TableCell>
                   <TableCell>
-                    <span className={med.stock <= med.reorderThreshold ? "text-destructive font-semibold" : ""}>
-                      {med.stock}
+                    <Badge variant="outline" className="text-xs">
+                      {item.category === "SUPPLY" ? "Supply" : "Medication"}
+                    </Badge>
+                  </TableCell>
+                  <TableCell>{item.unit}</TableCell>
+                  <TableCell>
+                    <span className={item.stock <= item.reorderThreshold ? "text-destructive font-semibold" : ""}>
+                      {item.stock}
                     </span>
-                    {med.stock <= med.reorderThreshold && (
-                      <Badge variant="destructive" className="ml-2 text-xs">Low stock</Badge>
+                    {item.stock <= item.reorderThreshold && (
+                      <Badge variant="destructive" className="ml-2 text-xs">Low</Badge>
                     )}
                   </TableCell>
-                  <TableCell>{med.reorderThreshold}</TableCell>
+                  <TableCell>{item.reorderThreshold}</TableCell>
                   <TableCell>
                     <div className="flex items-center justify-end gap-2">
-                      {canRestock && <RestockDialog medication={med} />}
+                      {canRestock && (
+                        <>
+                          <UseStockDialog item={item} />
+                          <RestockDialog medication={item} />
+                        </>
+                      )}
                       {canDelete && (
-                        confirmingDelete === med.id ? (
+                        confirmingDelete === item.id ? (
                           <>
                             <Button
                               type="button"
@@ -110,7 +155,7 @@ export function PharmacyTable({
                               type="button"
                               variant="destructive"
                               size="sm"
-                              onClick={() => handleDelete(med.id)}
+                              onClick={() => handleDelete(item.id)}
                               disabled={isPending}
                             >
                               {isPending ? "Deleting..." : "Confirm"}
@@ -121,7 +166,7 @@ export function PharmacyTable({
                             type="button"
                             variant="outline"
                             size="sm"
-                            onClick={() => setConfirmingDelete(med.id)}
+                            onClick={() => setConfirmingDelete(item.id)}
                           >
                             Delete
                           </Button>

@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { withRetry } from "@/lib/with-retry";
 import { getCurrentProfile } from "@/lib/auth";
 import { AuditLogFilters } from "@/components/audit-log/audit-log-filters";
+import { AuditLogPaginator } from "@/components/audit-log/audit-log-paginator";
 import {
   Table,
   TableBody,
@@ -33,19 +34,28 @@ export default async function AuditLogPage({
     redirect("/dashboard/patients");
   }
 
-  const { action, actor } = await searchParams;
+  const { action, actor, page } = await searchParams;
 
   const where: Prisma.AuditLogWhereInput = {};
   if (action) where.action = action;
   if (actor) where.actorName = { contains: actor, mode: "insensitive" };
 
-  const logs = await withRetry(() =>
-    prisma.auditLog.findMany({
-      where,
-      orderBy: { createdAt: "desc" },
-      take: 200,
-    }),
+  const PAGE_SIZE = 50;
+  const pageNum = Math.max(0, Number(page ?? 0));
+
+  const [logs, total] = await withRetry(() =>
+    Promise.all([
+      prisma.auditLog.findMany({
+        where,
+        orderBy: { createdAt: "desc" },
+        skip: pageNum * PAGE_SIZE,
+        take: PAGE_SIZE,
+      }),
+      prisma.auditLog.count({ where }),
+    ]),
   );
+
+  const pageCount = Math.ceil(total / PAGE_SIZE);
 
   return (
     <div className="flex flex-col gap-6">
@@ -89,6 +99,7 @@ export default async function AuditLogPage({
           </TableBody>
         </Table>
       </div>
+      <AuditLogPaginator page={pageNum} pageCount={pageCount} total={total} />
     </div>
   );
 }

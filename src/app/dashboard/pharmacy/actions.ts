@@ -21,6 +21,7 @@ export async function createMedication(formData: FormData) {
     unit: formData.get("unit"),
     stock: formData.get("stock"),
     reorderThreshold: formData.get("reorderThreshold"),
+    category: formData.get("category") ?? "MEDICATION",
   });
 
   if (!parsed.success) {
@@ -33,6 +34,7 @@ export async function createMedication(formData: FormData) {
         ...parsed.data,
         stock: Number(parsed.data.stock),
         reorderThreshold: Number(parsed.data.reorderThreshold),
+        category: parsed.data.category,
       },
     }),
   );
@@ -44,6 +46,39 @@ export async function createMedication(formData: FormData) {
 export async function deleteMedication(id: string) {
   await requireRole(["ADMIN"]);
   await withRetry(() => prisma.medication.delete({ where: { id } }));
+  revalidatePath("/dashboard/pharmacy");
+}
+
+export async function useStock(formData: FormData) {
+  await requireRole(["ADMIN", "RECEPTIONIST"]);
+
+  const parsed = restockSchema.safeParse({
+    medicationId: formData.get("medicationId"),
+    quantity: formData.get("quantity"),
+  });
+
+  if (!parsed.success) {
+    throw new Error(parsed.error.issues[0]?.message ?? "Invalid data");
+  }
+
+  const { medicationId, quantity } = parsed.data;
+
+  await withRetry(() =>
+    prisma.$transaction(async (tx) => {
+      const med = await tx.medication.findUniqueOrThrow({ where: { id: medicationId } });
+      if (med.stock < quantity) {
+        throw new Error(`Only ${med.stock} ${med.unit}(s) in stock`);
+      }
+      await tx.medication.update({
+        where: { id: medicationId },
+        data: { stock: { decrement: quantity } },
+      });
+      await tx.stockMovement.create({
+        data: { medicationId, delta: -quantity, reason: "USAGE" },
+      });
+    }),
+  );
+
   revalidatePath("/dashboard/pharmacy");
 }
 

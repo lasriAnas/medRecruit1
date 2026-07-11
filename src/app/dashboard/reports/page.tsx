@@ -5,6 +5,7 @@ import { getCurrentProfile } from "@/lib/auth";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { ExportReportButton } from "@/components/reports/export-report-button";
+import { ReportsDateFilter } from "@/components/reports/reports-date-filter";
 
 function startOfDay(date: Date) {
   const d = new Date(date);
@@ -20,18 +21,29 @@ function startOfWeek(date: Date) {
   return d;
 }
 
-export default async function ReportsPage() {
+export default async function ReportsPage({
+  searchParams,
+}: {
+  searchParams: Promise<Record<string, string>>;
+}) {
   const profile = await getCurrentProfile();
   if (profile?.role !== "ADMIN") {
     redirect("/dashboard/patients");
   }
 
+  const { from, to } = await searchParams;
+
   const now = new Date();
   const todayStart = startOfDay(now);
   const tomorrowStart = new Date(todayStart.getTime() + 24 * 60 * 60 * 1000);
   const weekStart = startOfWeek(now);
-
   const next24h = new Date(now.getTime() + 24 * 60 * 60 * 1000);
+
+  const rangeFrom = from ? new Date(from) : undefined;
+  const rangeTo = to ? new Date(new Date(to).setHours(23, 59, 59, 999)) : undefined;
+  const rangeFilter = rangeFrom || rangeTo
+    ? { gte: rangeFrom, lte: rangeTo }
+    : undefined;
 
   const [
     appointmentsToday,
@@ -56,11 +68,12 @@ export default async function ReportsPage() {
       }),
       prisma.invoice.groupBy({
         by: ["status"],
+        where: rangeFilter ? { createdAt: rangeFilter } : undefined,
         _sum: { amount: true },
       }),
       prisma.appointment.groupBy({
         by: ["doctorId"],
-        where: { scheduledAt: { gte: weekStart } },
+        where: { scheduledAt: rangeFilter ?? { gte: weekStart } },
         _count: { _all: true },
       }),
       prisma.patient.count(),
@@ -123,6 +136,8 @@ export default async function ReportsPage() {
         <h1 className="text-2xl font-semibold">Reports</h1>
         <ExportReportButton data={exportData} />
       </div>
+
+      <ReportsDateFilter from={from ?? ""} to={to ?? ""} />
 
       {(upcomingAppointments.length > 0 || unpaidInvoiceCount > 0 || lowStockMedications.length > 0) && (
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
@@ -220,7 +235,7 @@ export default async function ReportsPage() {
           </CardHeader>
           <CardContent>
             <div className="text-3xl font-semibold">{revenueCollected.toLocaleString()} MAD</div>
-            <p className="text-sm text-muted-foreground">From paid invoices</p>
+            <p className="text-sm text-muted-foreground">{rangeFilter ? "In selected period" : "All time"}</p>
           </CardContent>
         </Card>
 
@@ -230,7 +245,7 @@ export default async function ReportsPage() {
           </CardHeader>
           <CardContent>
             <div className="text-3xl font-semibold">{revenueOutstanding.toLocaleString()} MAD</div>
-            <p className="text-sm text-muted-foreground">From unpaid invoices</p>
+            <p className="text-sm text-muted-foreground">{rangeFilter ? "In selected period" : "All time"}</p>
           </CardContent>
         </Card>
 
@@ -247,7 +262,7 @@ export default async function ReportsPage() {
 
       <Card>
         <CardHeader>
-          <CardTitle>Doctor workload (this week)</CardTitle>
+          <CardTitle>Doctor workload {rangeFilter ? "(selected period)" : "(this week)"}</CardTitle>
         </CardHeader>
         <CardContent>
           {workloadSorted.length === 0 ? (

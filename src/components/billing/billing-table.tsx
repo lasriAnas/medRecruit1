@@ -4,6 +4,7 @@ import { useMemo, useState } from "react";
 import { PatientDetailDialog } from "@/components/patients/patient-detail-dialog";
 import { ReceiptDialog } from "@/components/billing/receipt-dialog";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import {
   Table,
   TableBody,
@@ -41,6 +42,7 @@ const ALL = "ALL";
 export function BillingTable({ data }: { data: InvoiceRow[] }) {
   const [status, setStatus] = useState(ALL);
   const [doctor, setDoctor] = useState(ALL);
+  const [search, setSearch] = useState("");
   const [sortAsc, setSortAsc] = useState(false);
 
   const doctorNames = useMemo(
@@ -49,9 +51,11 @@ export function BillingTable({ data }: { data: InvoiceRow[] }) {
   );
 
   const filtered = useMemo(() => {
+    const q = search.toLowerCase();
     return data
       .filter((row) => status === ALL || row.status === status)
       .filter((row) => doctor === ALL || row.doctorName === doctor)
+      .filter((row) => !q || row.patientName.toLowerCase().includes(q))
       .sort((a, b) =>
         sortAsc
           ? a.createdAt.localeCompare(b.createdAt)
@@ -84,6 +88,12 @@ export function BillingTable({ data }: { data: InvoiceRow[] }) {
   return (
     <div className="flex flex-col gap-4">
       <div className="flex flex-wrap items-end gap-3">
+        <Input
+          placeholder="Search patient..."
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          className="w-44"
+        />
         <div className="flex flex-col gap-1">
           <label className="text-sm text-muted-foreground">Status</label>
           <Select
@@ -120,11 +130,11 @@ export function BillingTable({ data }: { data: InvoiceRow[] }) {
             </SelectContent>
           </Select>
         </div>
-        {(status !== ALL || doctor !== ALL) && (
+        {(status !== ALL || doctor !== ALL || search) && (
           <button
             type="button"
             className="text-sm text-muted-foreground underline self-end mb-0.5"
-            onClick={() => { setStatus(ALL); setDoctor(ALL); }}
+            onClick={() => { setStatus(ALL); setDoctor(ALL); setSearch(""); }}
           >
             Clear filters
           </button>

@@ -8,6 +8,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { toast } from "sonner";
 import { updateUserRole } from "@/app/dashboard/users/actions";
 import type { Role } from "@/generated/prisma/enums";
 
@@ -30,7 +31,14 @@ export function RoleSelect({
       value={role}
       disabled={disabled || isPending}
       onValueChange={(value) =>
-        startTransition(() => updateUserRole(profileId, value as Role))
+        startTransition(async () => {
+          try {
+            await updateUserRole(profileId, value as Role);
+            toast.success("Role updated");
+          } catch (err) {
+            toast.error(err instanceof Error ? err.message : "Failed to update role");
+          }
+        })
       }
     >
       <SelectTrigger className="w-40">

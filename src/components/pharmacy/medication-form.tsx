@@ -14,6 +14,13 @@ import {
   FormLabel,
   FormMessage,
 } from "@/components/ui/form";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 export function MedicationForm({
   action,
@@ -27,8 +34,10 @@ export function MedicationForm({
   const form = useForm<MedicationFormValues>({
     resolver: zodResolver(medicationSchema),
     mode: "onChange",
-    defaultValues: { name: "", unit: "", stock: "0", reorderThreshold: "10" },
+    defaultValues: { name: "", unit: "", stock: "0", reorderThreshold: "10", category: "MEDICATION" },
   });
+
+  const category = form.watch("category");
 
   function onSubmit(values: MedicationFormValues) {
     const formData = new FormData();
@@ -45,12 +54,40 @@ export function MedicationForm({
       <form onSubmit={form.handleSubmit(onSubmit)} className="flex flex-col gap-4">
         <FormField
           control={form.control}
+          name="category"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Type</FormLabel>
+              <Select
+                items={{ MEDICATION: "Medication", SUPPLY: "Supply / consumable" }}
+                value={field.value}
+                onValueChange={(v) => field.onChange(v ?? "MEDICATION")}
+              >
+                <FormControl>
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                </FormControl>
+                <SelectContent>
+                  <SelectItem value="MEDICATION">Medication</SelectItem>
+                  <SelectItem value="SUPPLY">Supply / consumable</SelectItem>
+                </SelectContent>
+              </Select>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+        <FormField
+          control={form.control}
           name="name"
           render={({ field }) => (
             <FormItem>
               <FormLabel>Name</FormLabel>
               <FormControl>
-                <Input placeholder="e.g. Amoxicillin" {...field} />
+                <Input
+                  placeholder={category === "SUPPLY" ? "e.g. Latex gloves (L)" : "e.g. Amoxicillin 500mg"}
+                  {...field}
+                />
               </FormControl>
               <FormMessage />
             </FormItem>
@@ -63,7 +100,10 @@ export function MedicationForm({
             <FormItem>
               <FormLabel>Unit</FormLabel>
               <FormControl>
-                <Input placeholder="e.g. tablet, ml, vial" {...field} />
+                <Input
+                  placeholder={category === "SUPPLY" ? "e.g. pair, box, tube" : "e.g. tablet, ml, vial"}
+                  {...field}
+                />
               </FormControl>
               <FormMessage />
             </FormItem>
@@ -98,7 +138,7 @@ export function MedicationForm({
           />
         </div>
         <Button type="submit" disabled={isPending || !form.formState.isValid}>
-          {isPending ? "Adding..." : "Add medication"}
+          {isPending ? "Adding..." : `Add ${category === "SUPPLY" ? "supply" : "medication"}`}
         </Button>
       </form>
     </Form>

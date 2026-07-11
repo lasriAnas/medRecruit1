@@ -8,6 +8,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { toast } from "sonner";
 import { updateInvoiceStatus } from "@/app/dashboard/billing/actions";
 import type { InvoiceStatus } from "@/generated/prisma/enums";
 
@@ -30,7 +31,14 @@ export function InvoiceStatusSelect({
       value={status}
       disabled={isPending}
       onValueChange={(value) =>
-        startTransition(() => updateInvoiceStatus(invoiceId, value as InvoiceStatus))
+        startTransition(async () => {
+          try {
+            await updateInvoiceStatus(invoiceId, value as InvoiceStatus);
+            toast.success(`Invoice marked as ${value}`);
+          } catch (err) {
+            toast.error(err instanceof Error ? err.message : "Failed to update status");
+          }
+        })
       }
     >
       <SelectTrigger className="w-36">

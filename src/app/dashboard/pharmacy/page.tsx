@@ -10,7 +10,7 @@ export default async function PharmacyPage() {
   if (!profile) redirect("/login");
 
   const medications = await withRetry(() =>
-    prisma.medication.findMany({ orderBy: { name: "asc" } }),
+    prisma.medication.findMany({ orderBy: [{ category: "asc" }, { name: "asc" }] }),
   );
 
   const canCreate = profile.role === "ADMIN";

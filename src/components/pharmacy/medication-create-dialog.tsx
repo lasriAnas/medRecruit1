@@ -17,10 +17,10 @@ export function MedicationCreateDialog() {
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger render={<Button>Add medication</Button>} />
+      <DialogTrigger render={<Button>Add item</Button>} />
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
-          <DialogTitle>Add medication</DialogTitle>
+          <DialogTitle>Add item</DialogTitle>
         </DialogHeader>
         <MedicationForm action={createMedication} onSuccess={() => setOpen(false)} />
       </DialogContent>

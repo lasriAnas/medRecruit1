@@ -35,6 +35,11 @@ enum InvoiceStatus {
   CANCELLED
 }
 
+enum ItemCategory {
+  MEDICATION
+  SUPPLY
+}
+
 model Profile {
   id                 String   @id @default(uuid())
   email              String   @unique
@@ -90,6 +95,7 @@ model Medication {
   unit             String
   stock            Int             @default(0)
   reorderThreshold Int             @default(10)
+  category         ItemCategory    @default(MEDICATION)
   createdAt        DateTime        @default(now())
 
   stockMovements StockMovement[]
