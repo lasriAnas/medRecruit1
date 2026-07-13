@@ -1,9 +1,10 @@
 "use client";
 
 import { useEffect, useRef, useState, useTransition } from "react";
-import { fetchMessages, sendMessage, markAsRead } from "@/app/dashboard/messages/actions";
+import { fetchMessages, sendMessage, markAsRead, uploadAttachment, isImageAttachment } from "@/app/dashboard/messages/actions";
+import { findImageFile } from "@/lib/find-image-file";
 import { Button } from "@/components/ui/button";
-import { SendHorizontal } from "lucide-react";
+import { SendHorizontal, Paperclip, X, FileText } from "lucide-react";
 
 type Msg = {
   id: string;
@@ -11,6 +12,8 @@ type Msg = {
   senderId: string;
   createdAt: Date;
   readAt: Date | null;
+  attachmentUrl:  string | null;
+  attachmentName: string | null;
 };
 
 interface ChatThreadProps {
@@ -20,10 +23,13 @@ interface ChatThreadProps {
 }
 
 export function ChatThread({ currentProfileId, otherId, compact }: ChatThreadProps) {
-  const [messages, setMessages] = useState<Msg[]>([]);
-  const [input, setInput]       = useState("");
-  const [isPending, start]      = useTransition();
-  const bottomRef               = useRef<HTMLDivElement>(null);
+  const [messages, setMessages]             = useState<Msg[]>([]);
+  const [input, setInput]                   = useState("");
+  const [pendingFile, setPendingFile]       = useState<File | null>(null);
+  const [uploading, setUploading]           = useState(false);
+  const [isPending, start]                  = useTransition();
+  const bottomRef                           = useRef<HTMLDivElement>(null);
+  const fileInputRef                        = useRef<HTMLInputElement>(null);
 
   const load = async () => {
     const msgs = await fetchMessages(otherId);
@@ -44,13 +50,33 @@ export function ChatThread({ currentProfileId, otherId, compact }: ChatThreadPro
 
   const handleSend = () => {
     const body = input.trim();
-    if (!body) return;
+    if (!body && !pendingFile) return;
     setInput("");
-    start(async () => {
-      await sendMessage(otherId, body);
-      await load();
-    });
+
+    if (pendingFile) {
+      const file = pendingFile;
+      setPendingFile(null);
+      setUploading(true);
+      start(async () => {
+        try {
+          const fd = new FormData();
+          fd.append("file", file);
+          const { url, name } = await uploadAttachment(fd);
+          await sendMessage(otherId, body, url, name);
+        } finally {
+          setUploading(false);
+        }
+        await load();
+      });
+    } else {
+      start(async () => {
+        await sendMessage(otherId, body);
+        await load();
+      });
+    }
   };
+
+  const busy = isPending || uploading;
 
   return (
     <div className="flex flex-col h-full">
@@ -62,6 +88,7 @@ export function ChatThread({ currentProfileId, otherId, compact }: ChatThreadPro
         )}
         {messages.map((msg) => {
           const fromMe = msg.senderId === currentProfileId;
+          const isImg  = msg.attachmentName ? isImageAttachment(msg.attachmentName) : false;
           return (
             <div key={msg.id} className={`flex ${fromMe ? "justify-end" : "justify-start"}`}>
               <div
@@ -71,7 +98,29 @@ export function ChatThread({ currentProfileId, otherId, compact }: ChatThreadPro
                     : "bg-muted rounded-bl-sm"
                 }`}
               >
-                <p>{msg.body}</p>
+                {msg.attachmentUrl && isImg && (
+                  <a href={msg.attachmentUrl} target="_blank" rel="noreferrer">
+                    <img
+                      src={msg.attachmentUrl}
+                      alt={msg.attachmentName ?? "attachment"}
+                      className="max-w-full rounded-lg mb-1 max-h-48 object-contain"
+                    />
+                  </a>
+                )}
+                {msg.attachmentUrl && !isImg && (
+                  <a
+                    href={msg.attachmentUrl}
+                    target="_blank"
+                    rel="noreferrer"
+                    className={`flex items-center gap-1.5 mb-1 underline underline-offset-2 ${
+                      fromMe ? "text-primary-foreground/90" : "text-foreground"
+                    }`}
+                  >
+                    <FileText className="h-3.5 w-3.5 shrink-0" />
+                    <span className="truncate max-w-45 text-xs">{msg.attachmentName}</span>
+                  </a>
+                )}
+                {msg.body && <p>{msg.body}</p>}
                 <p className={`text-[10px] mt-0.5 opacity-60 ${fromMe ? "text-right" : ""}`}>
                   {new Date(msg.createdAt).toLocaleTimeString([], {
                     hour: "2-digit",
@@ -85,7 +134,37 @@ export function ChatThread({ currentProfileId, otherId, compact }: ChatThreadPro
         <div ref={bottomRef} />
       </div>
 
+      {/* Pending file preview */}
+      {pendingFile && (
+        <div className="px-3 pb-1 flex items-center gap-2 text-xs text-muted-foreground">
+          <FileText className="h-3.5 w-3.5 shrink-0" />
+          <span className="truncate">{pendingFile.name}</span>
+          <button onClick={() => setPendingFile(null)} className="ml-auto shrink-0 hover:text-foreground">
+            <X className="h-3.5 w-3.5" />
+          </button>
+        </div>
+      )}
+
       <div className="border-t p-2 flex gap-2 shrink-0">
+        <input
+          ref={fileInputRef}
+          type="file"
+          className="hidden"
+          onChange={(e) => {
+            const file = e.target.files?.[0];
+            if (file) setPendingFile(file);
+            e.target.value = "";
+          }}
+        />
+        <button
+          type="button"
+          onClick={() => fileInputRef.current?.click()}
+          disabled={busy}
+          className="shrink-0 text-muted-foreground hover:text-foreground disabled:opacity-40 transition-colors"
+          aria-label="Attach file"
+        >
+          <Paperclip className="h-4 w-4" />
+        </button>
         <input
           value={input}
           onChange={(e) => setInput(e.target.value)}
@@ -95,15 +174,22 @@ export function ChatThread({ currentProfileId, otherId, compact }: ChatThreadPro
               handleSend();
             }
           }}
+          onPaste={(e) => {
+            const file = findImageFile(e.clipboardData.files);
+            if (file) {
+              e.preventDefault();
+              setPendingFile(file);
+            }
+          }}
           placeholder="Type a message…"
-          disabled={isPending}
+          disabled={busy}
           className="flex-1 text-sm bg-background border rounded-md px-3 py-1.5 outline-none focus:ring-2 focus:ring-ring disabled:opacity-50"
         />
         <Button
           size="icon"
           className="shrink-0"
           onClick={handleSend}
-          disabled={isPending || !input.trim()}
+          disabled={busy || (!input.trim() && !pendingFile)}
         >
           <SendHorizontal className="h-4 w-4" />
         </Button>

@@ -2,13 +2,14 @@
 
 import { useEffect, useState } from "react";
 import { fetchConversations, getAllProfiles } from "@/app/dashboard/messages/actions";
+import { relativeTime } from "@/lib/relative-time";
 import { Button } from "@/components/ui/button";
 import { PenSquare, X } from "lucide-react";
 import type { Role } from "@/generated/prisma/enums";
 
 type Conversation = {
   other: { id: string; name: string };
-  lastMessage: { body: string; createdAt: Date; fromMe: boolean };
+  lastMessage: { body: string; attachmentName: string | null; createdAt: Date; fromMe: boolean };
   unreadCount: number;
 };
 
@@ -28,16 +29,6 @@ function initials(name: string) {
     .toUpperCase();
 }
 
-function relativeTime(date: Date) {
-  const diff = Date.now() - new Date(date).getTime();
-  const mins  = Math.floor(diff / 60000);
-  const hours = Math.floor(diff / 3600000);
-  const days  = Math.floor(diff / 86400000);
-  if (mins < 1)  return "now";
-  if (mins < 60) return `${mins}m`;
-  if (hours < 24) return `${hours}h`;
-  return `${days}d`;
-}
 
 export function ConversationsList({ onSelect, activeId }: ConversationsListProps) {
   const [conversations, setConversations] = useState<Conversation[]>([]);
@@ -150,7 +141,8 @@ export function ConversationsList({ onSelect, activeId }: ConversationsListProps
                 </span>
               </div>
               <p className="text-xs text-muted-foreground mt-0.5 truncate">
-                {lastMessage.fromMe ? "You: " : ""}{lastMessage.body}
+                {lastMessage.fromMe ? "You: " : ""}
+                {lastMessage.body || (lastMessage.attachmentName ? "Attachment" : "")}
               </p>
             </div>
           </button>

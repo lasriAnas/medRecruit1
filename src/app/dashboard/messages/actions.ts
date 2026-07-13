@@ -4,6 +4,13 @@ import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/prisma";
 import { withRetry } from "@/lib/with-retry";
 import { getCurrentProfile } from "@/lib/auth";
+import { supabaseAdmin } from "@/lib/supabase/admin";
+import { isImageAttachment } from "@/lib/is-image-attachment";
+
+export { isImageAttachment };
+
+const BUCKET = "message-attachments";
+const MAX_BYTES = 5 * 1024 * 1024; // 5 MB
 
 // ─── Reads ────────────────────────────────────────────────────────────────────
 
@@ -25,7 +32,7 @@ export async function fetchConversations() {
   const seen = new Set<string>();
   const conversations: {
     other: { id: string; name: string };
-    lastMessage: { body: string; createdAt: Date; fromMe: boolean };
+    lastMessage: { body: string; attachmentName: string | null; createdAt: Date; fromMe: boolean };
     unreadCount: number;
   }[] = [];
 
@@ -40,7 +47,12 @@ export async function fetchConversations() {
 
     conversations.push({
       other,
-      lastMessage: { body: msg.body, createdAt: msg.createdAt, fromMe: msg.senderId === profile.id },
+      lastMessage: {
+        body: msg.body,
+        attachmentName: msg.attachmentName,
+        createdAt: msg.createdAt,
+        fromMe: msg.senderId === profile.id,
+      },
       unreadCount: unread,
     });
   }
@@ -61,7 +73,15 @@ export async function fetchMessages(otherId: string) {
         ],
       },
       orderBy: { createdAt: "asc" },
-      select: { id: true, body: true, senderId: true, createdAt: true, readAt: true },
+      select: {
+        id: true,
+        body: true,
+        senderId: true,
+        createdAt: true,
+        readAt: true,
+        attachmentUrl: true,
+        attachmentName: true,
+      },
     }),
   );
 }
@@ -90,15 +110,53 @@ export async function getAllProfiles() {
 
 // ─── Mutations ────────────────────────────────────────────────────────────────
 
-export async function sendMessage(receiverId: string, body: string) {
+export async function uploadAttachment(formData: FormData) {
   const profile = await getCurrentProfile();
   if (!profile) throw new Error("Not authenticated");
-  if (!body.trim()) throw new Error("Message cannot be empty");
+
+  const file = formData.get("file") as File | null;
+  if (!file) throw new Error("No file provided");
+  if (file.size > MAX_BYTES) throw new Error("File must be under 5 MB");
+
+  // Create bucket if it doesn't exist yet
+  await supabaseAdmin.storage
+    .createBucket(BUCKET, { public: true })
+    .catch(() => { /* already exists */ });
+
+  const ext  = file.name.split(".").pop() ?? "bin";
+  const path = `${profile.id}/${Date.now()}.${ext}`;
+
+  const { error } = await supabaseAdmin.storage
+    .from(BUCKET)
+    .upload(path, await file.arrayBuffer(), { contentType: file.type });
+
+  if (error) throw new Error(error.message);
+
+  const { data } = supabaseAdmin.storage.from(BUCKET).getPublicUrl(path);
+
+  return { url: data.publicUrl, name: file.name };
+}
+
+export async function sendMessage(
+  receiverId: string,
+  body: string,
+  attachmentUrl?: string,
+  attachmentName?: string,
+) {
+  const profile = await getCurrentProfile();
+  if (!profile) throw new Error("Not authenticated");
+  if (!body.trim() && !attachmentUrl) throw new Error("Message cannot be empty");
   if (receiverId === profile.id) throw new Error("Cannot message yourself");
 
   await withRetry(() =>
     prisma.message.create({
-      data: { senderId: profile.id, receiverId, body: body.trim() },
+      data: {
+        senderId: profile.id,
+        receiverId,
+        body: body.trim(),
+        attachmentUrl:  attachmentUrl  ?? null,
+        attachmentName: attachmentName ?? null,
+      },
     }),
   );
 

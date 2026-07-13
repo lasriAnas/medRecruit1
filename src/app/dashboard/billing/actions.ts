@@ -9,7 +9,7 @@ import { logAudit } from "@/lib/audit";
 import type { InvoiceStatus } from "@/generated/prisma/enums";
 
 export async function createInvoice(formData: FormData) {
-  await requireRole(["ADMIN", "RECEPTIONIST"]);
+  const actor = await requireRole(["ADMIN", "RECEPTIONIST"]);
 
   const parsed = invoiceSchema.safeParse({
     appointmentId: formData.get("appointmentId"),
@@ -26,8 +26,23 @@ export async function createInvoice(formData: FormData) {
         appointmentId: parsed.data.appointmentId,
         amount: Number(parsed.data.amount),
       },
+      include: {
+        appointment: {
+          select: {
+            patient: { select: { name: true } },
+          },
+        },
+      },
     }),
   );
+
+  await logAudit({
+    actor,
+    action: "INVOICE_CREATED",
+    targetType: "Invoice",
+    targetId: invoice.id,
+    details: `${invoice.amount} MAD for ${invoice.appointment.patient.name}`,
+  });
 
   revalidatePath("/dashboard/billing");
   return invoice;
@@ -57,10 +72,10 @@ export async function updateInvoiceStatus(id: string, status: InvoiceStatus) {
   );
   await logAudit({
     actor,
-    action: "INVOICE_STATUS_CHANGED",
+    action: status === "PAID" ? "INVOICE_PAID" : "INVOICE_STATUS_CHANGED",
     targetType: "Invoice",
     targetId: id,
-    details: `Status changed to ${status}`,
+    details: status === "PAID" ? "Payment confirmed" : `Status changed to ${status}`,
   });
   revalidatePath("/dashboard/billing");
 }

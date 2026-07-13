@@ -18,7 +18,11 @@ const ACTION_OPTIONS = [
   { value: "ACCOUNT_DEACTIVATED", label: "Account deactivated" },
   { value: "ACCOUNT_REACTIVATED", label: "Account reactivated" },
   { value: "PATIENT_DELETED", label: "Patient deleted" },
+  { value: "INVOICE_CREATED", label: "Invoice created" },
+  { value: "INVOICE_PAID", label: "Payment confirmed" },
   { value: "INVOICE_STATUS_CHANGED", label: "Invoice status changed" },
+  { value: "MEDICATION_RESTOCKED", label: "Medication restocked" },
+  { value: "MEDICATION_USED", label: "Medication used" },
 ];
 
 export function AuditLogFilters() {

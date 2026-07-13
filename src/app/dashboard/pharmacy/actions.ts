@@ -6,12 +6,8 @@ import { medicationSchema } from "@/lib/schemas/medication";
 import { prescriptionItemSchema } from "@/lib/schemas/prescription";
 import { withRetry } from "@/lib/with-retry";
 import { requireRole } from "@/lib/auth";
-import { z } from "zod";
-
-const restockSchema = z.object({
-  medicationId: z.string().min(1),
-  quantity: z.coerce.number().int().min(1, "Quantity must be at least 1"),
-});
+import { logAudit } from "@/lib/audit";
+import { restockSchema } from "@/lib/schemas/restock";
 
 export async function createMedication(formData: FormData) {
   await requireRole(["ADMIN"]);
@@ -50,7 +46,7 @@ export async function deleteMedication(id: string) {
 }
 
 export async function useStock(formData: FormData) {
-  await requireRole(["ADMIN", "RECEPTIONIST"]);
+  const actor = await requireRole(["ADMIN", "RECEPTIONIST"]);
 
   const parsed = restockSchema.safeParse({
     medicationId: formData.get("medicationId"),
@@ -63,11 +59,11 @@ export async function useStock(formData: FormData) {
 
   const { medicationId, quantity } = parsed.data;
 
-  await withRetry(() =>
+  const med = await withRetry(() =>
     prisma.$transaction(async (tx) => {
-      const med = await tx.medication.findUniqueOrThrow({ where: { id: medicationId } });
-      if (med.stock < quantity) {
-        throw new Error(`Only ${med.stock} ${med.unit}(s) in stock`);
+      const medication = await tx.medication.findUniqueOrThrow({ where: { id: medicationId } });
+      if (medication.stock < quantity) {
+        throw new Error(`Only ${medication.stock} ${medication.unit}(s) in stock`);
       }
       await tx.medication.update({
         where: { id: medicationId },
@@ -76,14 +72,23 @@ export async function useStock(formData: FormData) {
       await tx.stockMovement.create({
         data: { medicationId, delta: -quantity, reason: "USAGE" },
       });
+      return medication;
     }),
   );
+
+  await logAudit({
+    actor,
+    action: "MEDICATION_USED",
+    targetType: "Medication",
+    targetId: medicationId,
+    details: `-${quantity} ${med.unit} of ${med.name} (was: ${med.stock})`,
+  });
 
   revalidatePath("/dashboard/pharmacy");
 }
 
 export async function restockMedication(formData: FormData) {
-  await requireRole(["ADMIN", "RECEPTIONIST"]);
+  const actor = await requireRole(["ADMIN", "RECEPTIONIST"]);
 
   const parsed = restockSchema.safeParse({
     medicationId: formData.get("medicationId"),
@@ -96,17 +101,27 @@ export async function restockMedication(formData: FormData) {
 
   const { medicationId, quantity } = parsed.data;
 
-  await withRetry(() =>
+  const med = await withRetry(() =>
     prisma.$transaction(async (tx) => {
-      await tx.medication.update({
+      const medication = await tx.medication.update({
         where: { id: medicationId },
         data: { stock: { increment: quantity } },
+        select: { name: true, unit: true, stock: true },
       });
       await tx.stockMovement.create({
         data: { medicationId, delta: quantity, reason: "RESTOCK" },
       });
+      return medication;
     }),
   );
+
+  await logAudit({
+    actor,
+    action: "MEDICATION_RESTOCKED",
+    targetType: "Medication",
+    targetId: medicationId,
+    details: `+${quantity} ${med.unit} of ${med.name} (new stock: ${med.stock})`,
+  });
 
   revalidatePath("/dashboard/pharmacy");
 }
