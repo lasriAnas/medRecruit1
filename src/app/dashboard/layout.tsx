@@ -3,17 +3,19 @@ import { getCurrentProfile } from "@/lib/auth";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { DashboardNav } from "@/components/dashboard-nav";
+import { ChatWidget } from "@/components/messages/chat-widget";
 import { signOut } from "./actions";
 import type { Role } from "@/generated/prisma/enums";
 
 const NAV_ITEMS: { href: string; label: string; roles: Role[] }[] = [
-  { href: "/dashboard/reports", label: "Reports", roles: ["ADMIN"] },
-  { href: "/dashboard/patients", label: "Patients", roles: ["ADMIN", "DOCTOR", "RECEPTIONIST"] },
+  { href: "/dashboard/reports",      label: "Reports",      roles: ["ADMIN"] },
+  { href: "/dashboard/patients",     label: "Patients",     roles: ["ADMIN", "DOCTOR", "RECEPTIONIST"] },
   { href: "/dashboard/appointments", label: "Appointments", roles: ["ADMIN", "DOCTOR", "RECEPTIONIST"] },
-  { href: "/dashboard/billing", label: "Billing", roles: ["ADMIN", "RECEPTIONIST"] },
-  { href: "/dashboard/pharmacy", label: "Pharmacy", roles: ["ADMIN", "DOCTOR", "RECEPTIONIST"] },
-  { href: "/dashboard/users", label: "Users", roles: ["ADMIN"] },
-  { href: "/dashboard/audit-log", label: "Audit log", roles: ["ADMIN"] },
+  { href: "/dashboard/billing",      label: "Billing",      roles: ["ADMIN", "RECEPTIONIST"] },
+  { href: "/dashboard/pharmacy",     label: "Pharmacy",     roles: ["ADMIN", "DOCTOR", "RECEPTIONIST"] },
+  { href: "/dashboard/messages",     label: "Messages",     roles: ["ADMIN", "DOCTOR", "RECEPTIONIST"] },
+  { href: "/dashboard/users",        label: "Users",        roles: ["ADMIN"] },
+  { href: "/dashboard/audit-log",    label: "Audit log",    roles: ["ADMIN"] },
 ];
 
 export default async function DashboardLayout({
@@ -53,6 +55,7 @@ export default async function DashboardLayout({
         </header>
         <main className="flex-1 p-6 print:p-0">{children}</main>
       </div>
+      <ChatWidget currentProfileId={profile.id} />
     </div>
   );
 }

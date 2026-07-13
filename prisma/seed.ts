@@ -152,6 +152,7 @@ async function upsertProfile(user: (typeof SEED_USERS)[number]) {
 
 async function main() {
   // 1. Wipe non-user data so the seed is rerunnable with fresh state
+  await prisma.message.deleteMany();
   await prisma.auditLog.deleteMany();
   await prisma.stockMovement.deleteMany();
   await prisma.prescriptionItem.deleteMany();
@@ -520,6 +521,35 @@ async function main() {
       { actorId: actorAdmin.id, actorName: actorAdmin.name, action: "INVOICE_STATUS_CHANGED", targetType: "Invoice", details: "Marked invoice as PAID — Fatima Zahra Benali" },
       { actorId: actorAdmin.id, actorName: actorAdmin.name, action: "INVOICE_STATUS_CHANGED", targetType: "Invoice", details: "Marked invoice as CANCELLED — Hassan Idrissi" },
       { actorId: actorAdmin.id, actorName: actorAdmin.name, action: "PATIENT_DELETED",     targetType: "Patient", details: "Deleted test patient record" },
+    ],
+  });
+
+  // ── Messages ─────────────────────────────────────────────────────────────────
+  const reception = profiles.find((p) => p.email === "reception@medrecrut.dev")!;
+  const you       = profiles.find((p) => p.email === "you@medrecrut.dev")!;
+
+  const msgBase = new Date();
+  const minsAgo = (n: number) => new Date(msgBase.getTime() - n * 60000);
+
+  await prisma.message.createMany({
+    data: [
+      // Admin ↔ Dr. Karim
+      { senderId: admin.id,    receiverId: dr0.id,      body: "Good morning Dr. Karim. Can you cover Saturday's morning shift?",         createdAt: minsAgo(120) },
+      { senderId: dr0.id,      receiverId: admin.id,    body: "Good morning Alice. Yes, I'm available Saturday. What time should I start?", createdAt: minsAgo(115) },
+      { senderId: admin.id,    receiverId: dr0.id,      body: "8:00 AM would be perfect. Thank you!",                                     createdAt: minsAgo(110), readAt: minsAgo(108) },
+      { senderId: dr0.id,      receiverId: admin.id,    body: "Noted. I'll be there.",                                                    createdAt: minsAgo(105) },
+      // Admin ↔ Reception
+      { senderId: reception.id, receiverId: admin.id,   body: "We're running low on appointment slots for next week. Should I extend hours?", createdAt: minsAgo(60) },
+      { senderId: admin.id,     receiverId: reception.id, body: "Yes please, add two extra slots in the afternoon for Dr. Sara and Dr. Youssef.", createdAt: minsAgo(55), readAt: minsAgo(50) },
+      { senderId: reception.id, receiverId: admin.id,   body: "Done! I also updated the booking page.",                                   createdAt: minsAgo(45) },
+      // Dr. Sara ↔ Dr. Karim
+      { senderId: dr1.id,      receiverId: dr0.id,      body: "Karim, did you see the new lab results for patient Alaoui?",               createdAt: minsAgo(90) },
+      { senderId: dr0.id,      receiverId: dr1.id,      body: "Not yet — I'll review them this afternoon.",                               createdAt: minsAgo(85), readAt: minsAgo(80) },
+      { senderId: dr1.id,      receiverId: dr0.id,      body: "I'm a bit concerned about the potassium levels. Let's discuss.",           createdAt: minsAgo(75) },
+      // You ↔ Admin
+      { senderId: you.id,      receiverId: admin.id,    body: "Alice, just pushed the latest update. Everything's deployed.",             createdAt: minsAgo(30) },
+      { senderId: admin.id,    receiverId: you.id,      body: "Excellent! The billing page looks much better.",                           createdAt: minsAgo(25), readAt: minsAgo(20) },
+      { senderId: you.id,      receiverId: admin.id,    body: "Thanks. Messaging is next 🙂",                                             createdAt: minsAgo(5) },
     ],
   });
 

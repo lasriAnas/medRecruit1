@@ -49,7 +49,25 @@ model Profile {
   mustChangePassword Boolean  @default(true)
   createdAt          DateTime @default(now())
 
-  appointments Appointment[] @relation("DoctorAppointments")
+  appointments     Appointment[] @relation("DoctorAppointments")
+  sentMessages     Message[]     @relation("MessageSender")
+  receivedMessages Message[]     @relation("MessageReceiver")
+}
+
+model Message {
+  id         String    @id @default(uuid())
+  senderId   String
+  receiverId String
+  body       String
+  readAt     DateTime?
+  createdAt  DateTime  @default(now())
+
+  sender   Profile @relation("MessageSender",   fields: [senderId],   references: [id], onDelete: Cascade)
+  receiver Profile @relation("MessageReceiver", fields: [receiverId], references: [id], onDelete: Cascade)
+
+  @@index([senderId])
+  @@index([receiverId])
+  @@index([createdAt])
 }
 
 model Patient {
