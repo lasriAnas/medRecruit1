@@ -25,7 +25,9 @@ export function ReceiptDialog({ receipt }: { receipt: ReceiptData }) {
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger render={<Button size="sm" variant="outline">View receipt</Button>} />
+      <DialogTrigger render={<Button size="sm" variant="outline" />}>
+        View receipt
+      </DialogTrigger>
       <DialogContent className="sm:max-w-lg print:shadow-none">
         <DialogHeader className="print:hidden">
           <DialogTitle>Receipt</DialogTitle>
