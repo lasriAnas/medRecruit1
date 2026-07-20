@@ -14,6 +14,9 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { OptionCombobox } from "@/components/option-combobox";
 import { AppointmentStatusSelect } from "@/components/appointments/appointment-status-select";
+import { AppointmentNotesDialog } from "@/components/appointments/appointment-notes-dialog";
+import { DiagnosisDialog } from "@/components/appointments/diagnosis-dialog";
+import { canEditAppointmentNotes } from "@/lib/can-edit-appointment-notes";
 import { toCsv, downloadCsv } from "@/lib/csv";
 import type { AppointmentStatus } from "@/generated/prisma/enums";
 
@@ -25,6 +28,8 @@ export type AppointmentRow = {
   doctorName: string;
   scheduledAt: string;
   status: AppointmentStatus;
+  notes: string | null;
+  diagnosis: string | null;
 };
 
 const ALL_DOCTORS = "ALL";
@@ -33,9 +38,13 @@ const PAGE_SIZE = 20;
 export function AppointmentsTable({
   data,
   doctors,
+  currentProfileId,
+  currentRole,
 }: {
   data: AppointmentRow[];
   doctors: { id: string; name: string }[];
+  currentProfileId: string;
+  currentRole: string;
 }) {
   const [doctorId, setDoctorId] = useState(ALL_DOCTORS);
   const [date, setDate] = useState("");
@@ -134,6 +143,8 @@ export function AppointmentsTable({
                 </button>
               </TableHead>
               <TableHead>Status</TableHead>
+              <TableHead className="w-10">Notes</TableHead>
+              <TableHead className="w-10">Diagnosis</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -155,6 +166,21 @@ export function AppointmentsTable({
                   <TableCell>{new Date(appt.scheduledAt).toLocaleString()}</TableCell>
                   <TableCell>
                     <AppointmentStatusSelect appointmentId={appt.id} status={appt.status} />
+                  </TableCell>
+                  <TableCell>
+                    <AppointmentNotesDialog
+                      appointmentId={appt.id}
+                      initialNotes={appt.notes}
+                      canEdit={canEditAppointmentNotes(currentRole, currentProfileId, appt.doctorId)}
+                    />
+                  </TableCell>
+                  <TableCell>
+                    <DiagnosisDialog
+                      appointmentId={appt.id}
+                      initialDiagnosis={appt.diagnosis}
+                      canEdit={canEditAppointmentNotes(currentRole, currentProfileId, appt.doctorId)}
+                      isCompleted={appt.status === "COMPLETED"}
+                    />
                   </TableCell>
                 </TableRow>
               ))

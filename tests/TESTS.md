@@ -1,6 +1,6 @@
 # Test Suite
 
-Run with `npm test`. All 78 tests pass.
+Run with `npm test`. All 138 tests pass.
 
 ## `lib/csv.test.ts` — `toCsv`
 
@@ -147,3 +147,32 @@ Run with `npm test`. All 78 tests pass.
 | 3 | Rejects when passwords do not match | `{ password: "password1", confirmPassword: "password2" }` | `success: false`, error on `confirmPassword`: `"Passwords do not match"` |
 | 4 | Rejects empty confirmPassword | `{ password: "password1", confirmPassword: "" }` | `success: false` |
 | 5 | Accepts exactly 6 character password | `{ password: "abc123", confirmPassword: "abc123" }` | `success: true` |
+
+---
+
+## `lib/schemas/profile.test.ts` — `profileSchema` and `settingsPasswordSchema`
+
+### `profileSchema`
+
+| # | Test | Input | Expected result |
+|---|------|-------|-----------------|
+| 1 | Accepts a valid profile | `{ name: "Anas Lasri", email: "anas@clinic.ma" }` | `success: true` |
+| 2 | Rejects an empty name | `name: ""` | `success: false`, message: `"Name is required"` |
+| 3 | Rejects an empty email | `email: ""` | `success: false`, message: `"Invalid email address"` |
+| 4 | Rejects a malformed email | `email: "not-an-email"` | `success: false`, message: `"Invalid email address"` |
+| 5 | Rejects an email missing the domain | `email: "anas@"` | `success: false` |
+| 6 | Rejects an email missing the @ | `email: "anasat clinic.ma"` | `success: false` |
+| 7 | Accepts various valid email formats | `user@example.com`, `user+tag@sub.domain.org`, `first.last@clinic.ma` | `success: true` for each |
+
+### `settingsPasswordSchema`
+
+| # | Test | Input | Expected result |
+|---|------|-------|-----------------|
+| 1 | Accepts matching passwords of sufficient length | `{ currentPassword, newPassword: "newpass123", confirmPassword: "newpass123" }` | `success: true` |
+| 2 | Accepts exactly 6-character new password | `newPassword: "abc123"`, `confirmPassword: "abc123"` | `success: true` |
+| 3 | Rejects an empty currentPassword | `currentPassword: ""` | `success: false`, message: `"Current password is required"` |
+| 4 | Rejects a newPassword shorter than 6 characters | `newPassword: "abc"`, `confirmPassword: "abc"` | `success: false`, message: `"Password must be at least 6 characters"` |
+| 5 | Rejects when newPassword and confirmPassword do not match | `newPassword: "newpass123"`, `confirmPassword: "different456"` | `success: false`, error on `confirmPassword`: `"Passwords do not match"` |
+| 6 | Rejects an empty confirmPassword | `confirmPassword: ""` | `success: false` |
+| 7 | Rejects when confirmPassword differs despite newPassword matching current | `currentPassword: "pass123"`, `newPassword: "pass123"`, `confirmPassword: "different"` | `success: false` |
+| 8 | Does not require newPassword to differ from currentPassword | all three fields set to `"samepass"` | `success: true` (UX concern only, not enforced by schema) |

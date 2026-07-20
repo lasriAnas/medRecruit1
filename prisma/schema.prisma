@@ -8,16 +8,30 @@ datasource db {
 }
 
 model Profile {
-  id                 String        @id @default(uuid())
-  email              String        @unique
+  id                 String         @id @default(uuid())
+  email              String         @unique
   name               String
-  role               Role          @default(RECEPTIONIST)
-  createdAt          DateTime      @default(now())
-  active             Boolean       @default(true)
-  mustChangePassword Boolean       @default(true)
-  appointments       Appointment[] @relation("DoctorAppointments")
-  receivedMessages   Message[]     @relation("MessageReceiver")
-  sentMessages       Message[]     @relation("MessageSender")
+  role               Role           @default(RECEPTIONIST)
+  createdAt          DateTime       @default(now())
+  active             Boolean        @default(true)
+  mustChangePassword Boolean        @default(true)
+  appointments       Appointment[]  @relation("DoctorAppointments")
+  receivedMessages   Message[]      @relation("MessageReceiver")
+  sentMessages       Message[]      @relation("MessageSender")
+  notifications      Notification[]
+}
+
+model Notification {
+  id        String   @id @default(uuid())
+  profileId String
+  profile   Profile  @relation(fields: [profileId], references: [id], onDelete: Cascade)
+  type      String
+  body      String
+  link      String?
+  read      Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  @@index([profileId, read])
 }
 
 model Message {
@@ -55,6 +69,7 @@ model Appointment {
   scheduledAt  DateTime
   status       AppointmentStatus @default(SCHEDULED)
   notes        String?
+  diagnosis    String?
   createdAt    DateTime          @default(now())
   doctor       Profile           @relation("DoctorAppointments", fields: [doctorId], references: [id])
   patient      Patient           @relation(fields: [patientId], references: [id], onDelete: Cascade)

@@ -1,9 +1,12 @@
+import Link from "next/link";
 import { redirect } from "next/navigation";
 import { getCurrentProfile } from "@/lib/auth";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { DashboardNav } from "@/components/dashboard-nav";
 import { ChatWidget } from "@/components/messages/chat-widget";
+import { NotificationBell } from "@/components/notifications/notification-bell";
+import { ThemeToggle } from "@/components/theme-toggle";
 import { signOut } from "./actions";
 import type { Role } from "@/generated/prisma/enums";
 
@@ -38,20 +41,29 @@ export default async function DashboardLayout({
   return (
     <div className="flex min-h-screen">
       <aside className="w-56 border-r bg-muted/30 p-4 flex flex-col gap-4 print:hidden">
-        <div className="text-lg font-semibold px-2">medRecrut</div>
+        <Link href="/dashboard" className="text-lg font-semibold px-2 hover:opacity-80 transition-opacity">
+          medRecrut
+        </Link>
         <DashboardNav items={visibleNavItems} />
       </aside>
       <div className="flex-1 flex flex-col">
         <header className="flex items-center justify-between border-b px-6 py-3 print:hidden">
-          <div className="flex items-center gap-2">
+          <Link
+            href="/dashboard/settings"
+            className="flex items-center gap-2 rounded-md px-2 py-1 hover:bg-muted/60 transition-colors"
+          >
             <span className="text-sm font-medium">{profile.name}</span>
             <Badge variant="secondary">{profile.role}</Badge>
+          </Link>
+          <div className="flex items-center gap-1">
+            <NotificationBell profileId={profile.id} />
+            <ThemeToggle />
+            <form action={signOut}>
+              <Button type="submit" variant="outline" size="sm">
+                Sign out
+              </Button>
+            </form>
           </div>
-          <form action={signOut}>
-            <Button type="submit" variant="outline" size="sm">
-              Sign out
-            </Button>
-          </form>
         </header>
         <main className="flex-1 p-6 print:p-0">{children}</main>
       </div>

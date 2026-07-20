@@ -219,26 +219,27 @@ async function main() {
   // 5. Appointments
   // Format: [patientIndex, doctorProfile, scheduledAt, status, notes?]
   type ApptSeed = {
-    patient: typeof patients[number];
-    doctor:  typeof doctors[number];
-    at:      Date;
-    status:  "SCHEDULED" | "COMPLETED" | "CANCELLED";
-    notes?:  string;
+    patient:   typeof patients[number];
+    doctor:    typeof doctors[number];
+    at:        Date;
+    status:    "SCHEDULED" | "COMPLETED" | "CANCELLED";
+    notes?:    string;
+    diagnosis?: string;
   };
 
   const appts: ApptSeed[] = [
     // ── Past COMPLETED (3 months ago) ──────────────────────────────────────
-    { patient: patients[0],  doctor: dr0, at: daysAgo(92, 9),  status: "COMPLETED", notes: "Routine checkup" },
-    { patient: patients[1],  doctor: dr1, at: daysAgo(88, 10), status: "COMPLETED", notes: "Persistent cough" },
-    { patient: patients[2],  doctor: dr2, at: daysAgo(85, 11), status: "COMPLETED", notes: "Hypertension follow-up" },
+    { patient: patients[0],  doctor: dr0, at: daysAgo(92, 9),  status: "COMPLETED", notes: "Routine checkup",         diagnosis: "Essential hypertension (I10)" },
+    { patient: patients[1],  doctor: dr1, at: daysAgo(88, 10), status: "COMPLETED", notes: "Persistent cough",        diagnosis: "Acute bronchitis (J20.9)" },
+    { patient: patients[2],  doctor: dr2, at: daysAgo(85, 11), status: "COMPLETED", notes: "Hypertension follow-up",  diagnosis: "Stage 2 hypertension — medication adjusted" },
     { patient: patients[3],  doctor: dr3, at: daysAgo(80, 14), status: "COMPLETED" },
-    { patient: patients[4],  doctor: dr0, at: daysAgo(76, 9),  status: "COMPLETED", notes: "Diabetic check" },
+    { patient: patients[4],  doctor: dr0, at: daysAgo(76, 9),  status: "COMPLETED", notes: "Diabetic check",          diagnosis: "Type 2 diabetes mellitus (E11.9) — HbA1c 7.8%" },
     { patient: patients[5],  doctor: dr1, at: daysAgo(72, 10), status: "COMPLETED" },
-    { patient: patients[6],  doctor: dr2, at: daysAgo(68, 11), status: "COMPLETED", notes: "Post-op follow-up" },
+    { patient: patients[6],  doctor: dr2, at: daysAgo(68, 11), status: "COMPLETED", notes: "Post-op follow-up",       diagnosis: "Post-operative wound healing — satisfactory" },
     { patient: patients[7],  doctor: dr3, at: daysAgo(65, 15), status: "COMPLETED" },
-    { patient: patients[8],  doctor: dr0, at: daysAgo(60, 9),  status: "COMPLETED", notes: "Back pain assessment" },
+    { patient: patients[8],  doctor: dr0, at: daysAgo(60, 9),  status: "COMPLETED", notes: "Back pain assessment",    diagnosis: "Lumbar disc herniation L4-L5 (M51.16)" },
     { patient: patients[9],  doctor: dr1, at: daysAgo(58, 10), status: "COMPLETED" },
-    { patient: patients[10], doctor: dr2, at: daysAgo(55, 11), status: "COMPLETED", notes: "Skin rash" },
+    { patient: patients[10], doctor: dr2, at: daysAgo(55, 11), status: "COMPLETED", notes: "Skin rash",               diagnosis: "Atopic dermatitis (L20.9)" },
     { patient: patients[11], doctor: dr3, at: daysAgo(50, 14), status: "COMPLETED" },
 
     // ── Past CANCELLED ──────────────────────────────────────────────────────
@@ -248,33 +249,60 @@ async function main() {
     { patient: patients[25], doctor: dr3, at: daysAgo(47, 14), status: "CANCELLED" },
 
     // ── Past COMPLETED (1-2 months ago) ─────────────────────────────────────
-    { patient: patients[0],  doctor: dr1, at: daysAgo(45, 9),  status: "COMPLETED", notes: "Blood pressure recheck" },
+    { patient: patients[0],  doctor: dr1, at: daysAgo(45, 9),  status: "COMPLETED", notes: "Blood pressure recheck",  diagnosis: "Hypertensive urgency — BP 178/104 mmHg, medication escalated" },
     { patient: patients[2],  doctor: dr2, at: daysAgo(42, 10), status: "COMPLETED" },
-    { patient: patients[4],  doctor: dr0, at: daysAgo(40, 11), status: "COMPLETED", notes: "HbA1c results review" },
+    { patient: patients[4],  doctor: dr0, at: daysAgo(40, 11), status: "COMPLETED", notes: "HbA1c results review",    diagnosis: "Type 2 diabetes mellitus — HbA1c 8.2%, insulin initiated" },
     { patient: patients[6],  doctor: dr3, at: daysAgo(38, 14), status: "COMPLETED" },
-    { patient: patients[14], doctor: dr1, at: daysAgo(35, 9),  status: "COMPLETED", notes: "Cardiac screening" },
+    { patient: patients[14], doctor: dr1, at: daysAgo(35, 9),  status: "COMPLETED", notes: "Cardiac screening",       diagnosis: "Paroxysmal atrial fibrillation (I48.0) — Holter confirmed" },
     { patient: patients[15], doctor: dr2, at: daysAgo(33, 10), status: "COMPLETED" },
-    { patient: patients[16], doctor: dr3, at: daysAgo(30, 11), status: "COMPLETED", notes: "Sports injury" },
+    { patient: patients[16], doctor: dr3, at: daysAgo(30, 11), status: "COMPLETED", notes: "Sports injury",           diagnosis: "Grade II lateral ankle sprain (S93.4)" },
     { patient: patients[17], doctor: dr0, at: daysAgo(28, 14), status: "COMPLETED" },
 
     // ── Past COMPLETED (last 3 weeks) ────────────────────────────────────────
-    { patient: patients[18], doctor: dr1, at: daysAgo(20, 9),  status: "COMPLETED", notes: "Fever and fatigue" },
-    { patient: patients[19], doctor: dr2, at: daysAgo(18, 10), status: "COMPLETED" },
-    { patient: patients[21], doctor: dr3, at: daysAgo(15, 11), status: "COMPLETED", notes: "Allergy review" },
-    { patient: patients[22], doctor: dr0, at: daysAgo(13, 14), status: "COMPLETED" },
-    { patient: patients[23], doctor: dr1, at: daysAgo(11, 9),  status: "COMPLETED", notes: "UTI follow-up" },
-    { patient: patients[24], doctor: dr2, at: daysAgo(9,  10), status: "COMPLETED" },
-    { patient: patients[26], doctor: dr3, at: daysAgo(7,  11), status: "COMPLETED", notes: "Respiratory check" },
-    { patient: patients[27], doctor: dr0, at: daysAgo(5,  14), status: "COMPLETED" },
-    { patient: patients[28], doctor: dr1, at: daysAgo(4,  9),  status: "COMPLETED", notes: "Annual physical" },
-    { patient: patients[29], doctor: dr2, at: daysAgo(3,  10), status: "COMPLETED" },
-    { patient: patients[1],  doctor: dr3, at: daysAgo(2,  11), status: "COMPLETED", notes: "Wound re-dressing" },
-    { patient: patients[3],  doctor: dr0, at: daysAgo(1,  14), status: "COMPLETED" },
+    {
+      patient: patients[18], doctor: dr1, at: daysAgo(20, 9), status: "COMPLETED",
+      diagnosis: "Viral upper respiratory tract infection with secondary bacterial sinusitis (J06.9 + J32.9)",
+      notes: "Fever and fatigue\n\n[Dr. Tazi] 35yo F c/o fever 38.8°C x4 days, generalised fatigue, frontal headache, purulent nasal discharge. No sore throat. Mild facial tenderness over maxillary sinuses bilaterally. Tonsils normal. Chest clear. HR 96 reg, BP 118/74. CRP 48 — elevated. Throat swab sent. Given clinical picture consistent with bacterial sinusitis on top of viral URTI. Started on amoxicillin 500mg TDS x 7 days + paracetamol for symptomatic relief. Saline nasal irrigation advised. Return if no improvement after 48h or worsening.",
+    },
+    { patient: patients[19], doctor: dr2, at: daysAgo(18, 10), status: "COMPLETED",
+      diagnosis: "Migraine without aura (G43.009) — moderate episode",
+      notes: "Headache review\n\n[Dr. Tazi] 37yo F known migraineur, presents with 2-day history of right-sided throbbing headache 7/10, photophobia, nausea x2 episodes, no vomiting. No aura this episode. Last episode 6 weeks ago. Neuro exam: normal. BP 122/78. No meningism. Not taking preventive therapy currently. Counselled on triggers (poor sleep, skipped meals noted this week). Prescribed sumatriptan 50mg for acute attack. Discussed starting topiramate prophylaxis if frequency increases. Migraine diary recommended.",
+    },
+    { patient: patients[21], doctor: dr3, at: daysAgo(15, 11), status: "COMPLETED", diagnosis: "Seasonal allergic rhinitis (J30.1) — sensitised to grass pollen and HDM", notes: "Allergy review\n\n[Dr. Amrani] Suspected seasonal allergic rhinitis. Patient reports sneezing, nasal congestion and watery eyes since spring onset. No urticaria or angioedema. Skin prick test positive for grass pollen and house dust mite. Started on cetirizine 10 mg OD and fluticasone nasal spray. Advised allergen avoidance. Review in 6 weeks." },
+    {
+      patient: patients[22], doctor: dr0, at: daysAgo(13, 14), status: "COMPLETED",
+      diagnosis: "Acute gastroenteritis (A09) — likely viral, self-limiting",
+      notes: "GI complaint\n\n[Dr. Idrissi] 52yo M presenting w/ 48h hx of watery diarrhoea ~5-6x/day, nausea, 1 episode vomiting, crampy lower abdominal pain. No blood in stool. Ate at restaurant 3 days prior — possible food source. No fever. Mild dehydration clinically — dry mucous membranes, mild tachycardia HR 102. BP 130/80 sitting. Abdomen soft, mild diffuse tenderness, no guarding. Stool MC&S sent. Advised oral rehydration — plenty of fluids, ORS sachets. BRAT diet. Loperamide for symptomatic relief. Avoid dairy. Red flags discussed — return immediately if blood in stool, fever >39°C, severe pain or unable to keep fluids down.",
+    },
+    { patient: patients[23], doctor: dr1, at: daysAgo(11, 9),  status: "COMPLETED", diagnosis: "Uncomplicated urinary tract infection (N39.0) — resolved", notes: "UTI follow-up\n\n[Dr. Idrissi] Mid-stream urine culture from last visit grew E. coli — sensitive to nitrofurantoin. Patient completed 5-day course; symptoms fully resolved. Repeat dipstick today: negative for nitrites and leucocytes. Advised adequate hydration. No further antibiotics required. Return if symptoms recur." },
+    {
+      patient: patients[24], doctor: dr2, at: daysAgo(9, 10), status: "COMPLETED",
+      diagnosis: "Iron-deficiency anaemia (D50.9) — menstrual loss likely aetiology",
+      notes: "Fatigue workup\n\n[Dr. Tazi] 22yo F c/o persistent fatigue, pallor, occasional palpitations x 3 months. Heavy periods (7 days, flooding). Diet — vegetarian, low red meat. FBC: Hb 9.2 g/dL (low), MCV 71 fL (microcytic), ferritin 6 ug/L (very low). B12/folate normal. TFTs normal. Clinical exam: pallor of conjunctivae and nail beds confirmed, no splenomegaly. Commenced ferrous sulfate 200mg TDS with vit C to enhance absorption. Dietary iron counselling given — lentils, spinach, fortified cereals. Repeat FBC + ferritin in 6 weeks. Gynaecology referral for menorrhagia management. If no response consider IV iron.",
+    },
+    { patient: patients[26], doctor: dr3, at: daysAgo(7,  11), status: "COMPLETED", diagnosis: "COPD exacerbation (J44.1) — moderate severity, treated with steroids and bronchodilators", notes: "Respiratory check\n\n[Dr. Amrani] Patient with known COPD (GOLD II). Presenting with increased dyspnoea over past 2 weeks — no fever, sputum purulent. PEFR 55% predicted. Chest auscultation: bilateral expiratory wheeze, no crepitations. SpO2 94% on air. Commenced prednisolone 30 mg x 5 days and salbutamol nebulisation in clinic with good response. Reviewed inhaler technique. Follow-up in 10 days." },
+    {
+      patient: patients[27], doctor: dr0, at: daysAgo(5, 14), status: "COMPLETED",
+      diagnosis: "Type 2 diabetes mellitus with early peripheral neuropathy (E11.40)",
+      notes: "Diabetes annual review\n\n[Dr. Idrissi] 61yo M T2DM x 9 years. On metformin 1g BD + gliclazide 80mg OD. Reports new onset bilateral foot tingling and numbness x 2 months, worse at night. Weight stable. Diet non-compliant — admits high carb intake. HbA1c 9.4% (worsened from 8.1% 6 months ago). BP 142/88 mmHg — needs review. eGFR 68 (stable). Urine ACR: 3.8 mg/mmol (normal). FBC normal. Cholesterol 5.8 (LDL 3.9 — above target). Monofilament test: reduced sensation bilateral plantar surface. Vibration sense reduced right > left. Fundoscopy: mild background retinopathy. Referred to ophthalmology. Foot care nurse referral made. Commenced pregabalin 75mg BD for neuropathic pain. Increased gliclazide to 160mg. Added ramipril 5mg for BP + renoprotection. Statin dose reviewed — rosuvastatin 20mg. Dietary counselling repeated. Next HbA1c in 3 months.",
+    },
+    { patient: patients[28], doctor: dr1, at: daysAgo(4,  9),  status: "COMPLETED", diagnosis: "No acute pathology — routine health maintenance", notes: "Annual physical\n\n[Dr. Idrissi] Routine annual health screen. BP 128/82 mmHg (improved from 138/90 last visit — patient adherent to ramipril). BMI 27.4. FBC, lipid panel, HbA1c — all within normal limits. ECG: sinus rhythm, no significant changes. Advised continued lifestyle modification: diet and 30 min moderate exercise 5x/week. Next screen in 12 months or sooner if concerns arise." },
+    {
+      patient: patients[29], doctor: dr2, at: daysAgo(3, 10), status: "COMPLETED",
+      diagnosis: "Benign paroxysmal positional vertigo (BPPV) — right posterior canal (H81.1)",
+      notes: "Dizziness assessment\n\n[Dr. Tazi] 41yo F c/o sudden onset severe rotational vertigo x 5 days, triggered by rolling over in bed and looking up. No hearing loss, no tinnitus, no headache. Episodes last <60 secs. Nil recent head trauma. Nil new medications. Dix-Hallpike test: strong upbeat-torsional nystagmus on right side — consistent with right posterior canal BPPV. No central features. Epley manoeuvre performed in clinic — 2 cycles. Post-manoeuvre vertigo significantly reduced. Demonstrated home Epley to patient and carer. Advised to sleep semi-reclined x 48h, avoid sudden head movements. Given vestibular exercises leaflet. Review in 2 weeks. If symptoms persist or new neurological features — CT head and neurology referral.",
+    },
+    { patient: patients[1],  doctor: dr3, at: daysAgo(2,  11), status: "COMPLETED", notes: "Wound re-dressing",       diagnosis: "Post-traumatic wound infection — responding to topical antibiotics" },
+    {
+      patient: patients[3],  doctor: dr0, at: daysAgo(1, 14), status: "COMPLETED",
+      diagnosis: "Hypothyroidism (E03.9) — newly diagnosed, TSH significantly elevated",
+      notes: "Fatigue and weight gain\n\n[Dr. Idrissi] 36yo F presenting with 4-month hx of progressive fatigue, weight gain (+6kg), cold intolerance, constipation, dry skin, hair thinning. Menses irregular last 3 cycles. Low mood — denies SI. No previous thyroid history. Family hx: mother has Hashimoto's. Exam: HR 58 reg, BP 106/68. Mild periorbital puffiness. Skin dry and cool. Reflexes: slow relaxation phase bilaterally. Thyroid: not palpably enlarged. TFTs: TSH 42.6 mIU/L (grossly elevated), Free T4 7.2 pmol/L (low). TPO antibodies: 890 IU/mL — strongly positive (autoimmune thyroiditis). FBC: mild normocytic anaemia (Hb 11.1). Cholesterol 6.4. Commenced levothyroxine 50 mcg OD — titrate after 6 weeks. TFTs + FBC recheck in 6 weeks. Mental health screening questionnaire given (PHQ-9 score 8 — mild depression — likely secondary). Reassured that mood should improve as euthyroid state restored. No referral at this stage.",
+    },
 
     // ── Today / next 24h (shows on dashboard alert) ──────────────────────────
-    { patient: patients[5],  doctor: dr1, at: hoursFromNow(2),  status: "SCHEDULED", notes: "First consultation" },
+    { patient: patients[5],  doctor: dr1, at: hoursFromNow(2),  status: "SCHEDULED", notes: "First consultation — referred by GP for persistent headaches" },
     { patient: patients[7],  doctor: dr2, at: hoursFromNow(4),  status: "SCHEDULED" },
-    { patient: patients[9],  doctor: dr3, at: hoursFromNow(6),  status: "SCHEDULED", notes: "ECG review" },
+    { patient: patients[9],  doctor: dr3, at: hoursFromNow(6),  status: "SCHEDULED", notes: "ECG review — routine cardiac screening, no acute symptoms" },
     { patient: patients[11], doctor: dr0, at: hoursFromNow(20), status: "SCHEDULED" },
 
     // ── This week ────────────────────────────────────────────────────────────
@@ -308,6 +336,7 @@ async function main() {
           scheduledAt: a.at,
           status:      a.status,
           notes:       a.notes,
+          diagnosis:   a.diagnosis,
         },
       }),
     ),

@@ -6,6 +6,7 @@ import { withRetry } from "@/lib/with-retry";
 import { getCurrentProfile } from "@/lib/auth";
 import { supabaseAdmin } from "@/lib/supabase/admin";
 import { isImageAttachment } from "@/lib/is-image-attachment";
+import { createNotification } from "@/app/dashboard/notifications/actions";
 
 export { isImageAttachment };
 
@@ -159,6 +160,13 @@ export async function sendMessage(
       },
     }),
   );
+
+  await createNotification({
+    profileId: receiverId,
+    type: "NEW_MESSAGE",
+    body: `New message from ${profile.name}`,
+    link: "/dashboard/messages",
+  });
 
   revalidatePath("/dashboard/messages");
 }

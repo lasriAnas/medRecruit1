@@ -36,6 +36,8 @@ export default async function AppointmentsPage() {
     doctorName: appt.doctor.name,
     scheduledAt: appt.scheduledAt.toISOString(),
     status: appt.status,
+    notes: appt.notes ?? null,
+    diagnosis: appt.diagnosis ?? null,
   }));
 
   return (
@@ -44,7 +46,12 @@ export default async function AppointmentsPage() {
         <h1 className="text-2xl font-semibold">Appointments</h1>
         {canCreate && <AppointmentCreateDialog patients={patients} doctors={doctors} />}
       </div>
-      <AppointmentsTable data={rows} doctors={doctors} />
+      <AppointmentsTable
+        data={rows}
+        doctors={doctors}
+        currentProfileId={profile?.id ?? ""}
+        currentRole={profile?.role ?? ""}
+      />
     </div>
   );
 }
