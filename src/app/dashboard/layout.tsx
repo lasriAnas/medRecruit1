@@ -8,6 +8,7 @@ import { ChatWidget } from "@/components/messages/chat-widget";
 import { NotificationBell } from "@/components/notifications/notification-bell";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { signOut } from "./actions";
+import { Settings } from "lucide-react";
 import type { Role } from "@/generated/prisma/enums";
 
 const NAV_ITEMS: { href: string; label: string; roles: Role[] }[] = [
@@ -40,30 +41,57 @@ export default async function DashboardLayout({
 
   return (
     <div className="flex min-h-screen">
-      <aside className="w-56 border-r bg-muted/30 p-4 flex flex-col gap-4 print:hidden">
-        <Link href="/dashboard" className="text-lg font-semibold px-2 hover:opacity-80 transition-opacity">
-          CliniQ
+      {/* Sidebar */}
+      <aside className="w-60 flex flex-col bg-sidebar text-sidebar-foreground print:hidden shrink-0">
+        {/* Logo */}
+        <Link
+          href="/dashboard"
+          className="flex items-center gap-3 px-5 h-14 border-b border-sidebar-border hover:opacity-90 transition-opacity shrink-0"
+        >
+          <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-emerald-500 shrink-0">
+            <span className="text-white font-bold text-sm leading-none">C</span>
+          </div>
+          <span className="font-semibold text-sidebar-foreground tracking-tight">CliniQ</span>
         </Link>
-        <DashboardNav items={visibleNavItems} />
-      </aside>
-      <div className="flex-1 flex flex-col">
-        <header className="flex items-center justify-between border-b px-6 py-3 print:hidden">
+
+        {/* Nav */}
+        <div className="flex-1 overflow-y-auto px-3 py-4">
+          <DashboardNav items={visibleNavItems} />
+        </div>
+
+        {/* Bottom: user */}
+        <div className="border-t border-sidebar-border px-3 py-3 shrink-0">
           <Link
             href="/dashboard/settings"
-            className="flex items-center gap-2 rounded-md px-2 py-1 hover:bg-muted/60 transition-colors"
+            className="flex items-center gap-3 rounded-lg px-3 py-2 hover:bg-sidebar-accent transition-colors group"
           >
-            <span className="text-sm font-medium">{profile.name}</span>
-            <Badge variant="secondary">{profile.role}</Badge>
+            <div className="flex h-8 w-8 items-center justify-center rounded-full bg-sidebar-accent text-sidebar-foreground font-medium text-sm shrink-0">
+              {profile.name.charAt(0).toUpperCase()}
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className="text-sm font-medium text-sidebar-foreground truncate">{profile.name}</p>
+              <p className="text-xs text-sidebar-foreground/50 truncate">{profile.role}</p>
+            </div>
+            <Settings className="h-4 w-4 text-sidebar-foreground/40 shrink-0 group-hover:text-sidebar-foreground/70 transition-colors" />
           </Link>
-          <div className="flex items-center gap-1">
-            <NotificationBell profileId={profile.id} />
-            <ThemeToggle />
-            <form action={signOut}>
-              <Button type="submit" variant="outline" size="sm">
-                Sign out
-              </Button>
-            </form>
-          </div>
+          <form action={signOut} className="mt-1">
+            <Button
+              type="submit"
+              variant="ghost"
+              size="sm"
+              className="w-full justify-start text-sidebar-foreground/60 hover:text-sidebar-foreground hover:bg-sidebar-accent"
+            >
+              Sign out
+            </Button>
+          </form>
+        </div>
+      </aside>
+
+      {/* Main */}
+      <div className="flex-1 flex flex-col min-w-0">
+        <header className="flex items-center justify-end border-b px-6 py-3 print:hidden gap-1">
+          <NotificationBell profileId={profile.id} />
+          <ThemeToggle />
         </header>
         <main className="flex-1 p-6 print:p-0">{children}</main>
       </div>
