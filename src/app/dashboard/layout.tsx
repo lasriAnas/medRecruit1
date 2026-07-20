@@ -42,7 +42,7 @@ export default async function DashboardLayout({
     <div className="flex min-h-screen">
       <aside className="w-56 border-r bg-muted/30 p-4 flex flex-col gap-4 print:hidden">
         <Link href="/dashboard" className="text-lg font-semibold px-2 hover:opacity-80 transition-opacity">
-          medRecrut
+          CliniQ
         </Link>
         <DashboardNav items={visibleNavItems} />
       </aside>

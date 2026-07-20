@@ -1,4 +1,4 @@
-# medRecrut — Demo Script
+# CliniQ — Demo Script
 
 All accounts use the password: **`password123`**
 
@@ -20,7 +20,7 @@ Log in as each role to show what they can and can't see:
 
 ### Home dashboards
 
-Each role lands on a tailored home screen after login (or by clicking **medRecrut** in the sidebar).
+Each role lands on a tailored home screen after login (or by clicking **CliniQ** in the sidebar).
 
 **Admin dashboard**
 

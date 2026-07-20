@@ -64,7 +64,7 @@ export default async function PatientProfilePage({
 
       {/* Print header */}
       <div className="hidden print:flex flex-col items-center gap-1 border-b pb-4 text-center">
-        <div className="text-xl font-semibold">medRecrut Clinic</div>
+        <div className="text-xl font-semibold">CliniQ</div>
         <div className="text-lg">{patient.name}</div>
       </div>
 

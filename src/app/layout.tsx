@@ -15,8 +15,8 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "medRecrut",
-  description: "Medical recruitment and practice management",
+  title: "CliniQ",
+  description: "Clinic management and practice operations",
 };
 
 export default function RootLayout({

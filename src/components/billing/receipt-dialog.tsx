@@ -36,7 +36,7 @@ export function ReceiptDialog({ receipt }: { receipt: ReceiptData }) {
 
           <div className="mx-auto w-full max-w-lg rounded-lg border p-8 print:border-none print:p-0">
             <div className="flex flex-col items-center gap-1 border-b pb-4 text-center">
-              <div className="text-xl font-semibold">medRecrut Clinic</div>
+              <div className="text-xl font-semibold">CliniQ</div>
               <div className="text-sm text-muted-foreground">Payment receipt</div>
             </div>
 
